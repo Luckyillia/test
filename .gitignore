@@ -1,0 +1,11 @@
+src/data/
+src/data/data.json
+data/gameState.json
+data/data.json
+data/
+*__pycache__/
+*.tmp
+.idea/
+.venv/
+venv/
+.nicegui/
