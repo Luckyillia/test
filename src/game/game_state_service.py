@@ -43,6 +43,12 @@ class GameStateService:
             }
             self.save(data)
 
+    def game_exists(self, game_id):
+        data = self.load()
+        if game_id in data:
+            return True
+        return False
+
     def ensure_game_exists(self, game_id):
         data = self.load()
         if game_id not in data:

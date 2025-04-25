@@ -1,107 +1,62 @@
-# Chess Game Application
+# Detective Chronicles Game Platform
 
-The **Chess Game Application** is an advanced Python project focused on creating an interactive chess-playing experience. The application combines user management features (such as registration, login, and account maintenance) with a fully functional chess game. It is built using the `nicegui` library for a user-friendly interface and incorporates many advanced chess mechanics to ensure robust gameplay.
+A web application for creating text-based quests with game state management, user authentication, and interactive interfaces.
 
----
+## 🎮 Key Features
+- **Game Room Management**: Create/delete games, join via ID
+- **Dynamic Guides**: Residents, government institutions, public places
+- **Locations**: Travel between locations, visit history, document attachments
+- **Content Editor**: Newspapers, police cases, medical reports, registry office
+- **Authentication**: Registration, login, user management (admin-only)
+- **Dark Theme**: Toggle between light/dark modes
 
-## Features
+## 🔐 Usage
+1. **Registration/Login**:  
+   - Login: `/login`
+   - Register: `/register` (password ≥8 characters)
 
-### 1. **User Management**
-- Registration of new users with required fields like name, surname, username, password, and PESEL.
-- Automatic generation of user avatars using RoboHash, with an option to refresh the avatar.
-- Login system that authenticates users and manages session states.
-- A user table for administrators with options to add, edit, or delete users.
+2. **Create Game** (admin only):  
+   - Navigate to "Create Game" tab
+   - Enter unique Game ID
 
-### 2. **Chess Gameplay**
-- Full implementation of chess rules, including:
-  - King castling (both short and long).
-  - En passant pawn capture.
-  - Pawn promotion.
-  - Check, checkmate, and stalemate detection.
-- Interactive chessboard where pieces can be moved via drag-and-drop while validating legal moves.
-- Various endgame conditions (e.g., 75-move rule, insufficient material, king vs. king).
-
-### 3. **Game Management**
-- Creation and management of chess rooms for multiplayer gameplay.
-- Synchronization of game states between participants in a chess room (e.g., active user turn and piece placement).
-- Saving and loading chess games for continued gameplay.
-
-### 4. **Secure Data Handling**
-- User and game data are securely managed and stored locally in JSON files.
-- Username validation to prevent duplicates.
-- PESEL validation to ensure correct input (11 digits).
-
-### 5. **Modern UI**
-- Responsive and user-friendly interface using the `nicegui` library.
-- Toggleable dark mode.
-- Easy navigation with streamlined workflows for both admins and players.
-
-### 6. ChessBoard Module
-
-The `chess_board.py` module is the backbone of the game's chessboard functionality. It manages the creation, initialization, and resetting of the chessboard, as well as setting up specific game scenarios. Key features of this module include:
-
-- **Initialization of the Chessboard:** Sets up a standard chessboard with pieces in their starting positions.
-- **Key Gameplay Scenarios:**
-  - **Castling (Short and Long):** Implements the logic for enabling both types of castling.
-  - **En Passant:** Handles the logic for capturing pawns using the en passant rule.
-  - **Pawn Promotion:** Manages the promotion of pawns upon reaching the opposite end of the board.
-  - **Check and Checkmate Detection:** Provides methods for identifying checks and potential checkmate situations.
-  - **Stalemate Detection:** Checks for scenarios where a stalemate occurs.
-- **Custom Game Scenarios:**
-  - Allows for the creation of specific chessboard configurations, such as `king_vs_king` or empty chessboards for testing or custom setups.
-
-This module is crucial for ensuring realistic chess gameplay and contributes to simulating all possible game states according to the official rules of chess.
+3. **Gameplay**:  
+   - Travel between locations using IDs
+   - Edit in-game guides
+   - View newspapers and documents
+   - Track location history
 
 ---
 
 ## Project Structure
 ```text
-ChessGame/
+Detektyw/
 │
 ├── 📂 data
 │   ├── 📄 data.json
-│   └── 📄 game_state.json
-├── 📂 doc
-│   ├── 📄 ArchitectureClasses.drawio
-│   └── 📄 Coding Standard - Python.pdf
+│   └── 📄 gameState.json
 ├── 📄 README.md
 ├── 📄 requirements.txt
 ├── 📂 src
-│   ├── 📂 img
-│   │   ├── 📂 black-pieces
-│   │   │   ├── 📄 bishop-black.png
-│   │   │   ├── 📄 king-black.png
-│   │   │   ├── 📄 knight-black.png
-│   │   │   ├── 📄 pawn-black.png
-│   │   │   ├── 📄 queen-black.png
-│   │   │   └── 📄 rook-black.png
-│   │   └── 📂 white-pieces
-│   │       ├── 📄 bishop-white.png
-│   │       ├── 📄 king-white.png
-│   │       ├── 📄 knight-white.png
-│   │       ├── 📄 pawn-white.png
-│   │       ├── 📄 queen-white.png
-│   │       └── 📄 rook-white.png
 │   ├── 📄 main.py
 │   ├── 📂 models
 │   │   ├── 📄 user.py
 │   │   └── 📄 __init__.py
 │   │
 │   ├── 📂 services
-│   │   ├── 📄 game_state.py
 │   │   ├── 📄 login.py
 │   │   ├── 📄 registration.py
 │   │   ├── 📄 user_service.py
 │   │   └──📄 __init__.py
+│   │  
+│   ├── 📂 game
+│   │   ├── 📄 game_dialog.py
+│   │   ├── 📄 game_room_management.py
+│   │   ├── 📄 game_state_service.py
+│   │   ├── 📄 game_ui.py
+│   │   └──📄 __init__.py
 │   │
 │   ├── 📂 ui
 │   │   ├── 📂 components
-│   │   │   ├── 📄 chess_board.py
-│   │   │   ├── 📄 chess_castling.py
-│   │   │   ├── 📄 chess_endgame.py
-│   │   │   ├── 📄 chess_pieces.py
-│   │   │   ├── 📄 chess_room_management.py
-│   │   │   ├── 📄 user_chess.py
 │   │   │   ├── 📄 user_table.py
 │   │   │   └── 📄 __init__.py
 │   │   │ 
@@ -116,18 +71,16 @@ ChessGame/
 ## Statystyki Kodowania w Projekcie
 
 ```text
-┏━━━━━━━━━━━━━┳━━━━━━━┳━━━━━━━┳━━━━━━┳━━━━━━━┳━━━━━━━━━┳━━━━━┓
-┃ Language    ┃ Files ┃     % ┃ Code ┃     % ┃ Comment ┃   % ┃
-┡━━━━━━━━━━━━━╇━━━━━━━╇━━━━━━━╇━━━━━━╇━━━━━━━╇━━━━━━━━━╇━━━━━┩
-│ Python      │    20 │  52.6 │ 1543 │  69.7 │     203 │ 9.2 │
-│ Markdown    │     1 │   2.6 │  152 │  70.7 │       0 │ 0.0 │
-│ Text only   │     1 │   2.6 │   59 │ 100.0 │       0 │ 0.0 │
-│ JSON        │     2 │   5.3 │   55 │  77.5 │       0 │ 0.0 │
-│ __unknown__ │     1 │   2.6 │    0 │   0.0 │       0 │ 0.0 │
-│ __binary__  │    13 │  34.2 │    0 │   0.0 │       0 │ 0.0 │
-├─────────────┼───────┼───────┼──────┼───────┼─────────┼─────┤
-│ Sum         │    38 │ 100.0 │ 1809 │  70.7 │     203 │ 7.9 │
-└─────────────┴───────┴───────┴──────┴───────┴─────────┴─────┘
+┏━━━━━━━━━━━┳━━━━━━━┳━━━━━━━┳━━━━━━┳━━━━━━━┳━━━━━━━━━┳━━━━━┓
+┃ Language  ┃ Files ┃     % ┃ Code ┃     % ┃ Comment ┃   % ┃
+┡━━━━━━━━━━━╇━━━━━━━╇━━━━━━━╇━━━━━━╇━━━━━━━╇━━━━━━━━━╇━━━━━┩
+│ Python    │    17 │  81.0 │  849 │  67.1 │     105 │ 8.3 │
+│ Markdown  │     1 │   4.8 │  203 │  69.8 │       0 │ 0.0 │
+│ Text only │     1 │   4.8 │   59 │ 100.0 │       0 │ 0.0 │
+│ JSON      │     2 │   9.5 │   49 │  39.8 │       0 │ 0.0 │
+├───────────┼───────┼───────┼──────┼───────┼─────────┼─────┤
+│ Sum       │    21 │ 100.0 │ 1160 │  66.7 │     105 │ 6.0 │
+└───────────┴───────┴───────┴──────┴───────┴─────────┴─────┘
 ```
 
 ---
@@ -137,7 +90,7 @@ ChessGame/
 ### Prerequisites
 - Python 3.12 or later.
 
-### Installation Steps
+### 🛠️  Installation Steps
 1. Clone the repository:
    ```bash
    git clone https://gitlab.makolab.net/interns/cc/niceguidemo.git
@@ -176,19 +129,41 @@ ChessGame/
 ## Usage
 
 ### 1. Registration and Login
-- Create a new user account via the registration page.
-- Login to access the main dashboard with features like creating a new chess game.
+- Create a new user account via the `/register` page (password must be ≥8 characters)
+- Authenticate via `/login` to access game management features
+- Session persists with dark/light mode preferences
 
-### 2. Chess Gameplay
-- Create or join a chess room to start a game.
-- Play against other users (or as a visitor) by moving pieces on the board.
-- Follow the game rules, and the system will check for valid moves, captures, and game-ending conditions.
+### 2. Game Management
+**For All Players:**
+- Join existing games using unique Game IDs
+- Travel between locations by entering location IDs
+- View in-game newspapers and document attachments
+- Access dynamic guides: residents, government offices, public places
+- Track movement history with timestamps
+
+**For Admins:**
+- Create new game sessions with unique IDs
+- Edit starting narrative text for new games
+- Manage location descriptions and special venues:
+  - Police station (ID 112102)
+  - Morgue (ID 440321)
+  - Registry office (ID 220123)
+- Curate game newspapers and procedural documents
 
 ### 3. User Management
-- Admins can use the user table interface to view, add, edit, or delete user accounts.
-- Update avatars or regenerate them dynamically.
+**For Players:**
+- Update avatar using random generator
+- View personal game history
+
+**For Admins (username: lucky_illia):**
+- Access special admin tabs for user management
+- Add/delete users through interactive table
+- Edit user details directly in the UI
+- Regenerate user avatars
+- Monitor active game sessions
 
 ---
+
 
 ## Technologies Used
 
@@ -222,42 +197,48 @@ The app stores user information in a JSON file (`data/data.json`).
 }
 ```
 
-The app stores game information in a JSON file (`data/game_state.json`).
+The app stores game information in a JSON file (`data/gameState.json`).
 
 **Example user game_state:**
 ```json
 {
-  "a1e5cd94-94f6-4c74-b4b8-5c54d7353b9b": {
-    "users": [
-      "84ed04e0-69a0-40c5-92f4-f8904118369a"
-    ],
-    "visitors": [
-      "84ed04e0-69a0-40c5-92f4-f8904118369a"
-    ],
-    "board": [],
-    "captured_white": [],
-    "captured_black": [],
-    "turn": "black",
-    "timestamp": 1743002166.8977764,
-    "last_move": [
-      {
-        "type": "Queen",
-        "color": "white",
-        "x": 1,
-        "y": 3,
-        "has_moved": false,
-        "first_move": false
-      },
-      [
-        1,
-        4
-      ],
-      [
-        1,
-        3
-      ]
-    ]
-  }
+    "game_001": {
+        "beginText": "",
+        "gazeta": "",
+        "spravochnik": {
+            "people": [
+                "1.\tКалинин Артём Сергеевич - ул. Морская, д. 17, кв. 42 - код: 7824"
+            ],
+            "gosplace": [
+                "1.\tПолицейский участок №1 - ул. Советская, д. 25 - код: 112102"
+            ],
+            "obplace": [
+                "1.\tАптека \"ЗдравМир\" - ул. Ленина, д. 15 - код: 2487"
+            ]
+        },
+        "112102": {
+            "text": "",
+            "delo": ""
+        },
+        "440321": {
+            "text": "",
+            "vskrytie": ""
+        },
+        "220123": {
+            "text": "",
+            "otchet": ""
+        },
+        "place": {},
+        "location_history": [
+            {
+                "id": "start",
+                "text": "",
+                "additional_document": "",
+                "visited_at": 1745536657
+            }],
+        "current_location": "220123",
+        "move": 3
+    }
 }
 ```
 ---
@@ -280,7 +261,6 @@ This project is licensed under the MIT License. See the `LICENSE` file for more 
 ## Authors
 
 **Authors:**
-- **Illia Zaichenko** – *Original creator* – [zaichemko.illia](https://gitlab.makolab.net/zaichenko.illia)
-- **Maximilian Kuster** – *Original creator* – [kuster.maximilian](https://gitlab.makolab.net/kuster.maximilian)
+- **Illia Zaichenko** – *Original creator* – [luckyillia](https://github.com/luckyillia)
 
 If you have any questions or suggestions, feel free to reach out! 🚀 

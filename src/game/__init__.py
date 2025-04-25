@@ -1,6 +1,6 @@
 # src/game/__init__.py
 
 from .game_state_service import GameStateService
-from .game import Game
+from src.game.game_dialog import GameDialog
 
-__all__ = ['Game','GameStateService']
+__all__ = ['GameStateService', 'GameDialog']

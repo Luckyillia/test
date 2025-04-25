@@ -39,7 +39,7 @@ class GameRoomManagement:
                         status_label.classes('text-red-500 mt-2')
                         return
 
-                    if self.game_state_service.ensure_game_exists(game_id):
+                    if self.game_state_service.game_exists(game_id):
                         app.storage.user.update({'game_state_id': game_id})
 
                         # Сохраняем в user_data.json

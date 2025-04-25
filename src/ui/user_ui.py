@@ -7,7 +7,6 @@ from src.game.game_ui import GameUI
 from src.ui.components.user_table import UserTable
 from src.services.registration import Registration
 from src.services.user_service import UserService
-from src.game.game import Game
 
 
 class UserUI:
@@ -50,9 +49,6 @@ class UserUI:
 
                 with ui.tab_panel(three):
                     self.game_ui.table_game()
-
-            else:
-                ui.notify('Ты вошел не как админ', color='red')
 
             with ui.tab_panel(four):
                 game = self.game_ui.show_game_interface()
