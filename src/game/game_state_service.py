@@ -2,8 +2,12 @@ import json
 import os
 import time
 
+from nicegui import app
+
+
 class GameStateService:
-    def __init__(self, filepath='data/gameState.json'):
+    def __init__(self, game_ui ,filepath='data/gameState.json'):
+        self.game_ui = game_ui
         self.filepath = filepath
         self.ensure_file_exists()
 
@@ -138,6 +142,7 @@ class GameStateService:
 
         data[game_id]['location_history'].append(location_entry)
         data[game_id]['current_location'] = location_id
+        data[game_id]['last_visited_at'] = int(time.time())
         data[game_id]['move'] = data[game_id].get('move', 0) + 1  # Увеличиваем счетчик ходов
 
         self.save(data)
@@ -158,3 +163,13 @@ class GameStateService:
             return None
 
         return data[game_id].get('current_location', None)
+
+    def check_for_updates(self):
+        data = self.load()
+        game_id = app.storage.user.get('game_state_id')
+        if game_id not in data:
+            return
+        last_move_time = data[game_id].get('last_visited_at', 0)
+        if last_move_time > self.game_ui.last_update:
+            self.game_ui.show_game_interface()
+            self.game_ui.last_update = last_move_time

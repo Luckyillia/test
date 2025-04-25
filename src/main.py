@@ -12,4 +12,4 @@ if __name__ in {"__main__", "__mp_main__"}:
     def main_page() -> None:
         UserUI()
 
-    ui.run(storage_secret='THIS_NEEDS_TO_BE_CHANGED', on_air='szYHlJDRxFZVUXMQ', port=1234)
+    ui.run(storage_secret='THIS_NEEDS_TO_BE_CHANGED', on_air='EDJ9hMG3mRLIUqyD', port=1234)

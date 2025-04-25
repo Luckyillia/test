@@ -1,13 +1,12 @@
 from nicegui import ui, app
 
-from src.game.game_state_service import GameStateService
 from src.services.user_service import UserService
 
 
 class GameRoomManagement:
-    def __init__(self):
+    def __init__(self , game_state_service):
         self.user_service = UserService()
-        self.game_state_service = GameStateService()
+        self.game_state_service = game_state_service
         pass
     def leave_game(self):
         if not app.storage.user.get('game_state_id'):

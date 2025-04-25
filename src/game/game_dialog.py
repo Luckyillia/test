@@ -42,16 +42,6 @@ class GameDialog:
             ui.button('Закрыть', on_click=dialog.close).classes('mt-4 bg-gray-300')
         dialog.open()
 
-    def show_location_dialog(self, location_id, location_text):
-        """Показывает диалог с информацией о локации"""
-        with ui.dialog() as dialog, ui.card().classes('p-6 w-[700px] max-w-full'):
-            ui.label(f'Локация: {location_id}').classes('text-xl font-bold mb-4')
-
-            ui.markdown(location_text).classes('whitespace-pre-wrap text-base')
-
-            ui.button('Закрыть', on_click=dialog.close).classes('mt-4 bg-gray-300')
-        dialog.open()
-
     def show_document(self, additional_document):
         with ui.dialog() as dialog, ui.card().classes('p-6 w-[600px] max-w-full'):
             ui.label('Вложение').classes('text-xl font-bold mb-4')

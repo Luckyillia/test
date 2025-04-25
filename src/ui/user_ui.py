@@ -2,7 +2,6 @@ from venv import create
 
 from nicegui import app, ui
 
-from src.game.game_state_service import GameStateService
 from src.game.game_ui import GameUI
 from src.ui.components.user_table import UserTable
 from src.services.registration import Registration
@@ -13,9 +12,8 @@ class UserUI:
     def __init__(self):
         # Initialize user service and user table
         self.user_service = UserService()
-        self.game_state_service = GameStateService()
         self.user_table = UserTable(self.user_service)
-        self.game_ui = GameUI(self.game_state_service)
+        self.game_ui = GameUI()
         self.menu = None
         self.chess = None
         self.game_data = {}  # Store game data at class level

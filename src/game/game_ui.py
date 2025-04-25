@@ -1,16 +1,19 @@
 from nicegui import ui, app
 
+from src.game.game_state_service import GameStateService
 from src.game.game_dialog import GameDialog
 from src.game.game_room_management import GameRoomManagement
 
 
 class GameUI:
-    def __init__(self, game_state_service):
-        self.game_state_service = game_state_service
+    def __init__(self):
+        self.game_state_service = GameStateService(self)
         self.game_dialog = GameDialog(self)
-        self.game_room_management = GameRoomManagement()
+        self.game_room_management = GameRoomManagement(self.game_state_service)
         self.available_games = {}
         self.load_available_games()
+        self.last_update = 0
+        ui.timer(interval=1.0, callback=self.game_state_service.check_for_updates)
 
     def load_available_games(self):
         try:
@@ -387,7 +390,16 @@ class GameUI:
 
         if current_game_id not in self.available_games:
             with self.game_container:
-                ui.label(f'Игра с ID "{current_game_id}" не найдена.').classes('text-center w-full p-4 text-red-500')
+                with ui.card().classes('p-6 max-w-xl mx-auto mt-10 shadow-lg rounded-xl bg-white'):
+                    ui.label(f'⚠️ Игра с ID "{current_game_id}" не найдена.').classes('text-center text-red-600 text-lg font-semibold')
+
+                    ui.label('Проверьте правильность ID или выберите другую игру.').classes('text-center text-gray-500 mt-2')
+
+                    self.game_room_management.update_user_game_state(app.storage.user.get('user_id'), None)
+                    app.storage.user.update({'game_state_id': None})
+
+                    ui.button("Вернуться назад", on_click=lambda: ui.navigate.to('/')).classes(
+                        'mt-6 bg-blue-600 hover:bg-blue-700 text-white text-lg w-full rounded-lg py-2')
             return
 
         game_data = self.refresh_game_data(current_game_id)
@@ -497,9 +509,6 @@ class GameUI:
             ui.notify(f'Вы переместились в локацию {location_id}', color='positive')
             # Обновляем данные игры
             self.refresh_game_data(game_id)
-            # Показываем информацию о локации
-            self.game_dialog.show_location_dialog(location_id, location_text)
-
             # Обновляем только игровой интерфейс
             self.show_game_interface()
         else:
