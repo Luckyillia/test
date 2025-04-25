@@ -55,7 +55,7 @@ class UserUI:
                 ui.notify('Ты вошел не как админ', color='red')
 
             with ui.tab_panel(four):
-                game = Game()
+                game = self.game_ui.show_game_interface()
 
     def switch(self, event):
         # Toggle dark mode based on switch
