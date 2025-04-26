@@ -1,7 +1,6 @@
-from venv import create
-
 from nicegui import app, ui
 
+from src.game.admin_game_ui import AdminGameUI
 from src.game.game_ui import GameUI
 from src.ui.components.user_table import UserTable
 from src.services.registration import Registration
@@ -13,9 +12,8 @@ class UserUI:
         # Initialize user service and user table
         self.user_service = UserService()
         self.user_table = UserTable(self.user_service)
+        self.admin_game_ui = AdminGameUI()
         self.game_ui = GameUI()
-        self.menu = None
-        self.chess = None
         self.game_data = {}  # Store game data at class level
         self.setup_ui()
 
@@ -25,7 +23,7 @@ class UserUI:
             if (app.storage.user.get('username') == 'lucky_illia'):
                 one = ui.tab('Добавить пользователя')
                 two = ui.tab('Список пользователей')
-                three = ui.tab('Создать игру')
+                three = ui.tab('Управление играми')
             four = ui.tab('Игра')
 
         # User info and logout button
@@ -46,10 +44,10 @@ class UserUI:
                     self.user_table.init_table()
 
                 with ui.tab_panel(three):
-                    self.game_ui.table_game()
+                    self.admin_game_ui.table_game()
 
             with ui.tab_panel(four):
-                game = self.game_ui.show_game_interface()
+                self.game_ui.show_game_interface()
 
     def switch(self, event):
         # Toggle dark mode based on switch

@@ -2,6 +2,7 @@ import json
 import os
 import time
 
+from click import get_app_dir
 from nicegui import app
 
 
@@ -43,7 +44,13 @@ class GameStateService:
                 '440321': {'text': '', 'vskrytie': ''},
                 '220123': {'text': '', 'otchet': ''},
                 'place': {},
-                'move': 0
+                'isCulprit': {
+                    'id': None,
+                    'name': None,
+                    'endText': None
+                },
+                'move': 0,
+                'status': 'playing'
             }
             self.save(data)
 
@@ -117,6 +124,13 @@ class GameStateService:
         if game_id in data:
             data[game_id]['gazeta'] = text
             self.save(data)
+    def edit_culprit(self,game_id,id_culprit, name_culprit, end_text):
+        data = self.load()
+        if game_id in data:
+            data[game_id]['isCulprit']['id'] = id_culprit
+            data[game_id]['isCulprit']['name'] = name_culprit
+            data[game_id]['isCulprit']['endText'] = end_text
+            self.save(data)
 
     def delete_game_state(self, game_id):
         data = self.load()
@@ -143,7 +157,7 @@ class GameStateService:
         data[game_id]['location_history'].append(location_entry)
         data[game_id]['current_location'] = location_id
         data[game_id]['last_visited_at'] = int(time.time())
-        data[game_id]['move'] = data[game_id].get('move', 0) + 1  # Увеличиваем счетчик ходов
+        data[game_id]['move'] = data[game_id].get('move', 0) + 1
 
         self.save(data)
         return True
@@ -173,3 +187,16 @@ class GameStateService:
         if last_move_time > self.game_ui.last_update:
             self.game_ui.show_game_interface()
             self.game_ui.last_update = last_move_time
+
+    def finishing_game(self,game_id):
+        data = self.load()
+        if game_id in data:
+            data[game_id]['status'] = 'finished'
+            data['last_visited_at'] = int(time.time())
+            self.save(data)
+
+    def increment_move(self,game_id):
+        data = self.load()
+        if game_id in data:
+            data[game_id]['move'] = data[game_id].get('move', 0) + 1
+            self.save(data)

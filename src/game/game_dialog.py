@@ -42,6 +42,7 @@ class GameDialog:
             ui.button('Закрыть', on_click=dialog.close).classes('mt-4 bg-gray-300')
         dialog.open()
 
+
     def show_document(self, additional_document):
         with ui.dialog() as dialog, ui.card().classes('p-6 w-[600px] max-w-full'):
             ui.label('Вложение').classes('text-xl font-bold mb-4')
@@ -68,4 +69,25 @@ class GameDialog:
                     self.game_ui.travel_to_location(current_game_id, place_input.value),
                     dialog.close()
                 ]).classes('bg-blue-500 text-white')
+        dialog.open()
+
+    def show_accuse_dialog(self):
+        current_game_id = app.storage.user.get('game_state_id')
+        with ui.dialog() as dialog, ui.card().classes('p-6 w-96'):
+            ui.label('Кого вы подозреваете?').classes('text-xl font-bold mb-4')
+            suspect_input = ui.input('Введите ID жителя').classes('w-full mb-4')
+            status_label = ui.label('').classes('text-red-500 mt-2')
+
+            def accuse():
+                suspect_id = suspect_input.value.strip()
+                if not suspect_id:
+                    status_label.text = 'Введите ID жителя.'
+                    return
+                self.game_ui.accuse_suspect(current_game_id, suspect_id)
+                dialog.close()
+
+            with ui.row().classes('w-full justify-between'):
+                ui.button('Отмена', on_click=dialog.close).classes('bg-gray-300 dark:bg-gray-700')
+                ui.button('Обвинить', on_click=accuse).classes('bg-purple-600 text-white')
+
         dialog.open()

@@ -18,43 +18,37 @@ class GameRoomManagement:
         ui.navigate.to('/')
 
     def show_join_game_dialog(self):
-        self.dialog = ui.dialog().classes('w-full max-w-md')
+        # Создаем диалоговое окно
+        with ui.dialog() as dialog, ui.card().classes('p-6 w-96'):
+            ui.label('Присоединиться к игре').classes('text-xl font-bold mb-4')
 
-        with self.dialog:
-            with ui.card().classes('p-6 rounded-xl bg-white shadow-xl'):
-                with ui.row().classes('justify-between items-center'):
-                    ui.label('Присоединиться к игре').classes('text-xl font-semibold')
-                    ui.button(icon='close', on_click=self.dialog.close).props('flat dense')
+            game_id_input = ui.input(label='Введите ID места').classes('w-full mb-4')
 
-                ui.label('Введите ID игры').classes('text-gray-700 mb-2')
-                game_id_input = ui.input(label='ID Игры').classes('w-full')
+            status_label = ui.label('').classes('mt-2')
 
-                status_label = ui.label('').classes('mt-2')
+            def try_join():
+                game_id = game_id_input.value.strip()
+                if not game_id:
+                    status_label.text = 'Пожалуйста, введите ID игры.'
+                    status_label.classes('text-red-500 mt-2')
+                    return
 
-                def try_join():
-                    game_id = game_id_input.value.strip()
-                    if not game_id:
-                        status_label.text = 'Пожалуйста, введите ID игры.'
-                        status_label.classes('text-red-500 mt-2')
-                        return
+                if self.game_state_service.game_exists(game_id):
+                    app.storage.user.update({'game_state_id': game_id})
+                    self.update_user_game_state(app.storage.user.get('user_id'), game_id)
 
-                    if self.game_state_service.game_exists(game_id):
-                        app.storage.user.update({'game_state_id': game_id})
+                    status_label.text = ''
+                    dialog.close()
+                    ui.notify('✅ Вы успешно присоединились к игре!', type='positive')
+                    ui.navigate.to('/')
+                else:
+                    status_label.text = '❌ Игры с таким ID не существует.'
+                    status_label.classes('text-red-500 mt-2')
 
-                        # Сохраняем в user_data.json
-                        self.update_user_game_state(app.storage.user.get('user_id'), game_id)
-
-                        status_label.text = ''
-                        self.dialog.close()
-                        ui.notify('Вы успешно присоединились к игре!', type='positive')
-                        ui.navigate.to('/')
-                    else:
-                        status_label.text = 'Игры с таким ID не существует.'
-                        status_label.classes('text-red-500 mt-2')
-
-                ui.button('Присоединиться', on_click=try_join).classes('mt-4 bg-blue-600 text-white w-full')
-
-        self.dialog.open()
+            with ui.row().classes('w-full justify-between'):
+                ui.button('Отмена', on_click=dialog.close).classes('bg-gray-300 dark:bg-gray-700')
+                ui.button('Войти', on_click=lambda: try_join()).classes('bg-blue-500 text-white')
+        dialog.open()
 
     def update_user_game_state(self, user_id, game_state_id):
         """Update a user's game state ID in the user data"""
