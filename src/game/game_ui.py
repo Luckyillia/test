@@ -74,28 +74,60 @@ class GameUI:
                     # Если есть история локаций, показываем последнюю
                     if location_history:
                         for i, location in enumerate(location_history):
-                            with ui.card().classes('w-full mb-4 p-3'):
-                                ui.label(f'Шаг {i + 1}: Локация {location["id"]}').classes('font-bold mb-2')
-                                ui.markdown(location['text']).classes('whitespace-pre-wrap')
-                                if location.get('additional_document'):
-                                    # Создаем функцию, которая захватывает текущее значение документа
+                            location_id = location["id"]
+                            visited_at = location["visited_at"]
+
+                            spravochnik = game_data.get('spravochnik', {})
+                            gosplace = spravochnik.get('gosplace', {})
+                            people = spravochnik.get('people', {})
+
+                            # Определяем название локации
+                            if location_id in gosplace:
+                                location_name = gosplace[location_id]
+                            elif location_id in people:
+                                location_name = people[location_id]
+                            elif location_id == "start":
+                                location_name = 'Вводные данные'
+                            else:
+                                location_name = 'Неизвестная локация'
+
+                            location_text = None
+                            additional_document = None
+
+                            if location_id == '112102':  # Полиция
+                                location_text = game_data.get('112102', {}).get('text',
+                                                                                'Информация о полиции отсутствует')
+                                additional_document = game_data.get('112102', {}).get('delo', None)
+                            elif location_id == '440321':  # Морг
+                                location_text = game_data.get('440321', {}).get('text',
+                                                                                'Информация о морге отсутствует')
+                                additional_document = game_data.get('440321', {}).get('vskrytie', None)
+                            elif location_id == '220123':  # ЗАГС
+                                location_text = game_data.get('220123', {}).get('text',
+                                                                                'Информация о ЗАГСе отсутствует')
+                                additional_document = game_data.get('220123', {}).get('otchet', None)
+                            elif location_id == 'start':
+                                location_text = game_data.get('start', 'Для этой игры не задан начальный текст.')
+                            else:
+                                location_text = game_data.get('place', {}).get(location_id,
+                                                                               'Информация о месте отсутствует')
+
+                            with ui.expansion(f'Шаг {i + 1}: {location_name}', icon='ads_click', group='location').classes('w-full'):
+                                ui.markdown(location_text).classes('whitespace-pre-wrap')
+                                if additional_document:
                                     def create_click_handler(doc):
                                         return lambda: self.game_dialog.show_document(doc)
 
-                                    # Используем эту функцию для создания обработчика для каждой кнопки
                                     ui.button('Посмотреть вложение', icon='folder_open',
-                                              on_click=create_click_handler(location['additional_document'])).classes(
-                                        'mt-2')
+                                              on_click=create_click_handler(additional_document)).classes('mt-2')
+
+
                     # Иначе показываем начальный текст
-                    elif game_data.get('beginText'):
+                    elif game_data.get('start'):
                         # При первом запуске игры добавляем начальный текст как первую локацию
                         if not location_history:
-                            self.game_state_service.add_location_to_history(
-                                current_game_id,
-                                'start',
-                                game_data['beginText']
-                            )
-                        ui.markdown(game_data['beginText']).classes('whitespace-pre-wrap mb-6 text-lg')
+                            self.game_state_service.add_location_to_history(current_game_id,'start',)
+                        ui.markdown(game_data['start']).classes('whitespace-pre-wrap mb-6 text-lg')
                     else:
                         ui.label('Для этой игры не задан начальный текст.').classes('italic text-gray-500 mb-6')
 
@@ -162,40 +194,22 @@ class GameUI:
                         'mt-6 bg-blue-600 hover:bg-blue-700 text-white text-lg w-full rounded-lg py-2')
             return
 
-
     def travel_to_location(self, game_id, location_id):
         """Логика перемещения в новую локацию"""
         if not location_id:
             ui.notify('Укажите ID места', color='warning')
             return
 
-        # Получаем данные о месте
         game_data = self.game_state_service.get_game_state(game_id)
-        location_text = None
-        additional_document = None
 
-        # Проверяем специальные места
-        if location_id == '112102':  # Полиция
-            location_text = game_data.get('112102', {}).get('text', 'Информация о полиции отсутствует')
-            additional_document = game_data.get('112102', {}).get('delo', None)
-        elif location_id == '440321':  # Морг
-            location_text = game_data.get('440321', {}).get('text', 'Информация о морге отсутствует')
-            additional_document = game_data.get('440321', {}).get('vskrytie', None)
-        elif location_id == '220123':  # ЗАГС
-            location_text = game_data.get('220123', {}).get('text', 'Информация о ЗАГСе отсутствует')
-            additional_document = game_data.get('220123', {}).get('otchet', None)
-        else:
-            # Проверяем обычные места
-            locations = game_data.get('place', {})
-            if location_id in locations:
-                location_text = locations[location_id]
-            else:
-                game_data['move'] += 1
-                ui.notify(f'Место с ID {location_id} не найдено', color='negative')
-                return
+        # Проверяем, существует ли место
+        if location_id not in game_data.get('place', {}) and location_id not in ['112102', '440321', '220123']:
+            game_data['move'] += 1
+            ui.notify(f'Место с ID {location_id} не найдено', color='negative')
+            return
 
-        # Добавляем в историю перемещений
-        success = self.game_state_service.add_location_to_history(game_id, location_id, location_text, additional_document)
+        # Добавляем только ID в историю
+        success = self.game_state_service.add_location_to_history(game_id, location_id)
 
         if success:
             ui.notify(f'Вы переместились в локацию {location_id}', color='positive')
@@ -217,4 +231,3 @@ class GameUI:
             ui.notify('❌ Увы, это был не тот человек! Попробуйте ещё раз.', color='rose')
         self.game_state_service.increment_move(game_id)
         self.show_game_interface()
-

@@ -83,3 +83,10 @@ class UserService:
                 self.write_data(users)
                 return True
         return False
+
+    def check_user(self,username):
+        users = self.load_data()
+        for user in users:
+            if user['username'] == username:
+                return False
+        return True

@@ -1,3 +1,5 @@
+from itertools import count
+
 from nicegui import ui, app
 
 class GameDialog:
@@ -13,15 +15,16 @@ class GameDialog:
             'obplace': 'Справочник общественных мест'
         }
 
-        data = game_data.get('spravochnik', {}).get(section, [])
+        data = game_data.get('spravochnik', {}).get(section, {})
 
         with ui.dialog() as dialog, ui.card().classes('p-6 w-[700px] max-w-full'):
             ui.label(section_names.get(section, 'Справочник')).classes('text-xl font-bold mb-4')
-
+            count = 0
             if data:
-                if isinstance(data, list):
-                    for item in data:
-                        ui.markdown(f"- {item}").classes('text-base mb-2')
+                if isinstance(data, dict):
+                    for code, description in data.items():
+                        count += 1
+                        ui.markdown(f"**{count}**: {description}").classes('text-base mb-2')
                 else:
                     ui.markdown(str(data)).classes('text-base')
             else:

@@ -33,12 +33,12 @@ class GameStateService:
         data = self.load()
         if game_id not in data:
             data[game_id] = {
-                'beginText': None,
+                'start': None,
                 'gazeta': '',
                 'spravochnik': {
-                    'people': [],
-                    'gosplace': [],
-                    'obplace': []
+                    'people': {},
+                    'gosplace': {},
+                    'obplace': {}
                 },
                 '112102': {'text': '', 'delo': ''},
                 '440321': {'text': '', 'vskrytie': ''},
@@ -49,7 +49,6 @@ class GameStateService:
                     'name': None,
                     'endText': None
                 },
-                'move': 0,
                 'status': 'playing'
             }
             self.save(data)
@@ -100,19 +99,19 @@ class GameStateService:
             data[game_id]['220123']['otchet'] = otchet
         self.save(data)
 
-    def add_people(self, game_id, person_text):
+    def add_people(self, game_id, person_id, person_text):
         data = self.ensure_game_exists(game_id)
-        data[game_id]['spravochnik']['people'].append(person_text)
+        data[game_id]['spravochnik']['people'][person_id] = person_text
         self.save(data)
 
-    def add_gosplace(self, game_id, place_text):
+    def add_gosplace(self, game_id, place_id, place_text):
         data = self.ensure_game_exists(game_id)
-        data[game_id]['spravochnik']['gosplace'].append(place_text)
+        data[game_id]['spravochnik']['gosplace'][place_id] = place_text
         self.save(data)
 
-    def add_obplace(self, game_id, place_text):
+    def add_obplace(self, game_id, place_id, place_text):
         data = self.ensure_game_exists(game_id)
-        data[game_id]['spravochnik']['obplace'].append(place_text)
+        data[game_id]['spravochnik']['obplace'][place_id] = place_text
         self.save(data)
 
     def get_game_state(self, game_id):
@@ -132,14 +131,19 @@ class GameStateService:
             data[game_id]['isCulprit']['endText'] = end_text
             self.save(data)
 
+    def edit_game_status(self, game_id, new_status):
+        data = self.load()
+        data[game_id]['status'] = new_status
+        self.save(data)
+
     def delete_game_state(self, game_id):
         data = self.load()
         if game_id in data:
             del data[game_id]
             self.save(data)
 
-    def add_location_to_history(self, game_id, location_id, location_text, additional_document=''):
-        """Добавляет локацию в историю перемещений игрока"""
+    def add_location_to_history(self, game_id, location_id):
+        """Добавляет ID локации в историю перемещений игрока"""
         data = self.load()
         if game_id not in data:
             return False
@@ -149,9 +153,7 @@ class GameStateService:
 
         location_entry = {
             'id': location_id,
-            'text': location_text,
-            'additional_document': additional_document,
-            'visited_at': int(time.time())  # Время посещения
+            'visited_at': int(time.time())
         }
 
         data[game_id]['location_history'].append(location_entry)
@@ -192,7 +194,17 @@ class GameStateService:
         data = self.load()
         if game_id in data:
             data[game_id]['status'] = 'finished'
-            data['last_visited_at'] = int(time.time())
+            data[game_id]['last_visited_at'] = int(time.time())
+            self.save(data)
+
+    def reset_game(self,game_id):
+        data = self.load()
+        if game_id in data:
+            data[game_id]['status'] = 'playing'
+            data[game_id]['last_visited_at'] = 0
+            data[game_id]['move'] = 0
+            data[game_id]['location_history'] = []
+            data[game_id]['current_location'] = None
             self.save(data)
 
     def increment_move(self,game_id):

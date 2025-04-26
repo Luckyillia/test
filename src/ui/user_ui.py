@@ -2,6 +2,7 @@ from nicegui import app, ui
 
 from src.game.admin_game_ui import AdminGameUI
 from src.game.game_ui import GameUI
+from src.services.user_profile import UserProfile
 from src.ui.components.user_table import UserTable
 from src.services.registration import Registration
 from src.services.user_service import UserService
@@ -12,6 +13,7 @@ class UserUI:
         # Initialize user service and user table
         self.user_service = UserService()
         self.user_table = UserTable(self.user_service)
+        self.user_profile = UserProfile()
         self.admin_game_ui = AdminGameUI()
         self.game_ui = GameUI()
         self.game_data = {}  # Store game data at class level
@@ -25,6 +27,7 @@ class UserUI:
                 two = ui.tab('Список пользователей')
                 three = ui.tab('Управление играми')
             four = ui.tab('Игра')
+            five = ui.tab('Профиль')
 
         # User info and logout button
         with ui.row().classes('w-full items-center px-4 py-2 rounded-lg flex justify-center'):
@@ -48,6 +51,9 @@ class UserUI:
 
             with ui.tab_panel(four):
                 self.game_ui.show_game_interface()
+            with ui.tab_panel(five):
+                self.user_profile.show_profile_ui(app.storage.user.get('user_id'))
+
 
     def switch(self, event):
         # Toggle dark mode based on switch
