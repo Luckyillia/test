@@ -23,7 +23,7 @@ class UserProfile:
             ui.label('Пользователь не найден').classes('text-center text-2xl mt-10')
             return
 
-        with ui.row().classes('w-full justify-center h-screen'):
+        with ui.row().classes('w-full justify-center'):
             with ui.card().classes('p-8 shadow-xl w-96 flex flex-col items-center gap-4 bg-gray-100 dark:bg-gray-800'):
                 self.avatar_image = ui.image(user['avatar']).classes('rounded-full w-32 h-32 object-cover')
                 self.display_view_mode(user_id)

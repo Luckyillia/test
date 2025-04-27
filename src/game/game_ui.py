@@ -80,12 +80,15 @@ class GameUI:
                             spravochnik = game_data.get('spravochnik', {})
                             gosplace = spravochnik.get('gosplace', {})
                             people = spravochnik.get('people', {})
+                            obplace = spravochnik.get('obplace', {})
 
                             # Определяем название локации
                             if location_id in gosplace:
                                 location_name = gosplace[location_id]
                             elif location_id in people:
                                 location_name = people[location_id]
+                            elif location_id in obplace:
+                                location_name = obplace[location_id]
                             elif location_id == "start":
                                 location_name = 'Вводные данные'
                             else:

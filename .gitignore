@@ -9,3 +9,4 @@ data/
 .venv/
 venv/
 .nicegui/
+/backup
