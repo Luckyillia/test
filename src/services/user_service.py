@@ -2,91 +2,133 @@ import json
 import os
 import uuid
 from src.models.user import User
-
+from src.services.log_services import LogService  # Добавил импорт логирования
 
 class UserService:
     def __init__(self, file_name='data/data.json'):
-        # Initialize file name for data storage
         self.file_name = file_name
+        self.log_service = LogService()  # Инициализация логирования
 
     def load_data(self):
-        # Ensure the directory exists
         directory = os.path.dirname(self.file_name)
         if not os.path.exists(directory):
             os.makedirs(directory)
 
-        # Return empty list if file doesn't exist or is empty
-        if not os.path.exists(self.file_name):
-            return []
-        if os.stat(self.file_name).st_size == 0:
+        if not os.path.exists(self.file_name) or os.stat(self.file_name).st_size == 0:
             return []
 
-        # Try to load the JSON data
         try:
             with open(self.file_name, 'r', encoding='utf-8') as file:
-                return json.load(file).get("users", [])
-        except (json.JSONDecodeError, FileNotFoundError):
-            print("❌ Error: Could not load data from JSON file.")
+                users = json.load(file).get("users", [])
+                return users
+        except (json.JSONDecodeError, FileNotFoundError) as e:
+            self.log_service.add_error_log(
+                error_message="Ошибка загрузки данных пользователей",
+                metadata={"exception": str(e)}
+            )
             return []
 
     def write_data(self, users):
-        # Write data to the file
         try:
             directory = os.path.dirname(self.file_name)
             if not os.path.exists(directory):
                 os.makedirs(directory)
 
-            # Convert data to JSON format
             data_to_write = json.dumps(
-                {"users": users},  # Convert data to dict
+                {"users": users},
                 indent=4,
                 ensure_ascii=False
             )
 
-            # Write to a temporary file and then replace the original file
             temp_file_name = f"{self.file_name}.tmp"
             with open(temp_file_name, "w", encoding="utf-8") as temp_file:
                 temp_file.write(data_to_write)
 
             os.replace(temp_file_name, self.file_name)
+            return True
 
         except Exception as e:
-            print(f"❌ Error writing to file: {e}")
+            self.log_service.add_error_log(
+                error_message="Ошибка записи данных пользователей",
+                metadata={"exception": str(e)}
+            )
+            return False
 
     def add_user(self, name, surname, username, password, avatar):
-        # Add a new user to the system
         users = self.load_data()
-        for user in users:
-            if user['username'] == username:
-                return False
+        if not self.is_username_available(username):
+            self.log_service.add_error_log(
+                error_message="Попытка регистрации с занятым именем пользователя",
+                metadata={"username": username}
+            )
+            return False
+
         user_id = str(uuid.uuid4())
         new_user = User(user_id, name, surname, username, password, avatar).to_dict()
         users.append(new_user)
-        self.write_data(users)
-        return True
+        success = self.write_data(users)
+
+        if success:
+            self.log_service.add_user_action_log(
+                user_id=user_id,
+                action="USER_REGISTRATION",
+                message=f"Пользователь {username} успешно зарегистрирован"
+            )
+        return success
 
     def delete_user(self, user_id):
-        # Delete a user by ID
         users = self.load_data()
         updated_users = [user for user in users if user['id'] != user_id]
         if len(updated_users) == len(users):
             return False
-        self.write_data(updated_users)
-        return True
+        success = self.write_data(updated_users)
+
+        if success:
+            self.log_service.add_user_action_log(
+                user_id=user_id,
+                action="DELETE_USER_ACCOUNT",
+                message="Пользовательский аккаунт успешно удалён"
+            )
+        return success
 
     def edit_user(self, user_id, new_data):
-        # Edit a user's details by ID
         users = self.load_data()
-        for user in users:
+        for i, user in enumerate(users):
             if user['id'] == user_id:
-                user.update(new_data)
-                self.write_data(users)
-                return True
+                if 'id' in new_data and new_data['id'] != user_id:
+                    self.log_service.add_error_log(
+                        error_message="Попытка изменения ID пользователя",
+                        metadata={"user_id": user_id}
+                    )
+                    return False
+
+                if 'username' in new_data and new_data['username'] != user['username']:
+                    if not self.is_username_available(new_data['username']):
+                        self.log_service.add_error_log(
+                            error_message="Попытка изменения на уже занятое имя пользователя",
+                            metadata={"new_username": new_data['username']}
+                        )
+                        return False
+
+                users[i] = {**user, **new_data}
+                success = self.write_data(users)
+
+                if success:
+                    self.log_service.add_user_action_log(
+                        user_id=user_id,
+                        action="EDIT_USER_DATA",
+                        message="Данные пользователя успешно изменены"
+                    )
+                return success
         return False
 
-    def check_user(self,username):
+    def is_username_available(self, username):
+        users = self.load_data()
+        return not any(user['username'] == username for user in users)
+
+    def get_user_by_username(self, username):
         users = self.load_data()
         for user in users:
             if user['username'] == username:
-                return False
-        return True
+                return user
+        return None

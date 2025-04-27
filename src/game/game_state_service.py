@@ -7,7 +7,7 @@ from nicegui import app
 
 
 class GameStateService:
-    def __init__(self, game_ui ,filepath='data/gameState.json'):
+    def __init__(self, game_ui, filepath='data/gameState.json'):
         self.game_ui = game_ui
         self.filepath = filepath
         self.ensure_file_exists()
@@ -18,16 +18,40 @@ class GameStateService:
             os.makedirs(directory)
 
         if not os.path.exists(self.filepath):
-            with open(self.filepath, 'w', encoding='utf-8') as file:
-                json.dump({}, file)
+            self.save({})
 
     def load(self):
-        with open(self.filepath, 'r', encoding='utf-8') as file:
-            return json.load(file)
+        try:
+            with open(self.filepath, 'r', encoding='utf-8') as file:
+                return json.load(file)
+        except (json.JSONDecodeError, FileNotFoundError):
+            print("❌ Error: Could not load game state data.")
+            return {}
 
     def save(self, data):
-        with open(self.filepath, 'w', encoding='utf-8') as file:
-            json.dump(data, file, ensure_ascii=False, indent=4)
+        try:
+            directory = os.path.dirname(self.filepath)
+            if not os.path.exists(directory):
+                os.makedirs(directory)
+
+            # Convert data to JSON format
+            data_to_write = json.dumps(
+                data,
+                indent=4,
+                ensure_ascii=False
+            )
+
+            # Write to a temporary file and then replace the original file
+            temp_filepath = f"{self.filepath}.tmp"
+            with open(temp_filepath, 'w', encoding='utf-8') as temp_file:
+                temp_file.write(data_to_write)
+
+            # Replace the original file with the temporary one
+            os.replace(temp_filepath, self.filepath)
+            return True
+        except Exception as e:
+            print(f"❌ Error writing game state to file: {e}")
+            return False
 
     def create_game_state(self, game_id):
         data = self.load()
@@ -55,14 +79,13 @@ class GameStateService:
 
     def game_exists(self, game_id):
         data = self.load()
-        if game_id in data:
-            return True
-        return False
+        return game_id in data
 
     def ensure_game_exists(self, game_id):
         data = self.load()
         if game_id not in data:
             self.create_game_state(game_id)
+            return self.load()
         return data
 
     def add_place(self, game_id, place_id, text):
@@ -123,7 +146,8 @@ class GameStateService:
         if game_id in data:
             data[game_id]['gazeta'] = text
             self.save(data)
-    def edit_culprit(self,game_id,id_culprit, name_culprit, end_text):
+
+    def edit_culprit(self, game_id, id_culprit, name_culprit, end_text):
         data = self.load()
         if game_id in data:
             data[game_id]['isCulprit']['id'] = id_culprit
@@ -133,8 +157,9 @@ class GameStateService:
 
     def edit_game_status(self, game_id, new_status):
         data = self.load()
-        data[game_id]['status'] = new_status
-        self.save(data)
+        if game_id in data:
+            data[game_id]['status'] = new_status
+            self.save(data)
 
     def delete_game_state(self, game_id):
         data = self.load()
@@ -161,8 +186,7 @@ class GameStateService:
         data[game_id]['last_visited_at'] = int(time.time())
         data[game_id]['move'] = data[game_id].get('move', 0) + 1
 
-        self.save(data)
-        return True
+        return self.save(data)
 
     def get_location_history(self, game_id):
         """Возвращает историю перемещений игрока"""
@@ -190,14 +214,14 @@ class GameStateService:
             self.game_ui.show_game_interface()
             self.game_ui.last_update = last_move_time
 
-    def finishing_game(self,game_id):
+    def finishing_game(self, game_id):
         data = self.load()
         if game_id in data:
             data[game_id]['status'] = 'finished'
             data[game_id]['last_visited_at'] = int(time.time())
             self.save(data)
 
-    def reset_game(self,game_id):
+    def reset_game(self, game_id):
         data = self.load()
         if game_id in data:
             data[game_id]['status'] = 'playing'
@@ -207,7 +231,7 @@ class GameStateService:
             data[game_id]['current_location'] = None
             self.save(data)
 
-    def increment_move(self,game_id):
+    def increment_move(self, game_id):
         data = self.load()
         if game_id in data:
             data[game_id]['move'] = data[game_id].get('move', 0) + 1
