@@ -6,7 +6,7 @@ class GameDialog:
     def __init__(self, game_ui):
         self.game_ui = game_ui
 
-    def show_spravochnik_dialog(self, game_data, section):
+    def show_spravochnik_dialog(self, game_data, section, game_id=None, game_ui=None):
         """Показать справочник по выбранному разделу (люди, госструктуры, общественные места)"""
 
         section_names = {
@@ -24,7 +24,15 @@ class GameDialog:
                 if isinstance(data, dict):
                     for code, description in data.items():
                         count += 1
-                        ui.markdown(f"**{count}**: {description}").classes('text-base mb-2')
+                        with ui.row().classes('w-full justify-between'):
+                            ui.markdown(f"**{count}**: {description}").classes('text-base mb-2')
+                            def create_click_handler_for_travel(id, loc_id):
+                                return lambda: game_ui.travel_to_location(id, loc_id)
+                            ui.button('Поехать', on_click=create_click_handler_for_travel(game_id, code)).classes('bg-blue-500')
+                            if section == 'people':
+                                def create_click_handler_for_accuse_suspect(id, loc_id):
+                                    return lambda: game_ui.accuse_suspect(id, loc_id)
+                                ui.button('Обвинить', on_click=create_click_handler_for_accuse_suspect(game_id, code)).classes('bg-blue-500')
                 else:
                     ui.markdown(str(data)).classes('text-base')
             else:
@@ -35,7 +43,6 @@ class GameDialog:
         dialog.open()
 
     def show_newspaper_dialog(self, game_data):
-        """Показать окно с газетой"""
         with ui.dialog() as dialog, ui.card().classes('p-6 w-[600px] max-w-full'):
             ui.label('Газета').classes('text-xl font-bold mb-4')
 

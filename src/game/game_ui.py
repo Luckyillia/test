@@ -1,6 +1,4 @@
 from nicegui import ui, app
-import time
-
 from src.game.game_state_service import GameStateService
 from src.game.game_dialog import GameDialog
 from src.game.game_room_management import GameRoomManagement
@@ -18,6 +16,7 @@ class GameUI:
 
     def refresh_game_data(self, game_id):
         self.log_service.add_log(
+            level='GAME',
             message=f"Обновление данных игры для игры: {game_id}",
             action="REFRESH_GAME",
             metadata={"game_id": game_id}
@@ -27,6 +26,7 @@ class GameUI:
         ui.update()
         return self.game_data
 
+    @property
     def show_game_interface(self):
         current_game_id = app.storage.user.get('game_state_id')
         user_id = app.storage.user.get('user_id')
@@ -51,6 +51,7 @@ class GameUI:
                         'bg-blue-500 hover:bg-blue-600 text-white text-lg w-full rounded-lg py-2 transition')
 
             self.log_service.add_log(
+                level='GAME',
                 message="Показывание интерфейса без игры",
                 user_id=user_id,
                 action="NO_GAME"
@@ -58,8 +59,10 @@ class GameUI:
             return
 
         if not self.game_state_service.game_exists(current_game_id):
-            self.log_service.add_error_log(
-                error_message=f"Игра не найдена: {current_game_id}",
+            self.log_service.add_log(
+                level='GAME',
+                action='ERROR',
+                message=f"Игра не найдена: {current_game_id}",
                 user_id=user_id,
                 metadata={"game_id": current_game_id}
             )
@@ -83,6 +86,7 @@ class GameUI:
         game_data = self.refresh_game_data(current_game_id)
         if game_data['status'] != 'finished':
             self.log_service.add_log(
+                level='GAME',
                 message=f"Показывание активной игры для пользователя",
                 user_id=user_id,
                 action="SHOW_GAME",
@@ -139,9 +143,12 @@ class GameUI:
                                 additional_document = game_data.get('220123', {}).get('otchet', None)
                             elif location_id == 'start':
                                 location_text = game_data.get('start', 'Для этой игры не задан начальный текст.')
+                            elif location_id in game_data.get('place', {}):
+                                location_text = game_data.get('place', {}).get(location_id, 'Информация о месте отсутствует')
                             else:
-                                location_text = game_data.get('place', {}).get(location_id,
-                                                                               'Информация о месте отсутствует')
+                                location_text = 'По данному делу информации нет'
+
+
 
                             with ui.expansion(f'Шаг {i + 1}: {location_name}', icon='ads_click',
                                               group='location').classes('w-full'):
@@ -159,6 +166,7 @@ class GameUI:
                         # При первом запуске игры добавляем начальный текст как первую локацию
                         if not location_history:
                             self.log_service.add_log(
+                                level='GAME',
                                 message=f"Первый запуск игры для айди {current_game_id}, добавление начальной локации",
                                 user_id=user_id,
                                 action="ADD_START_LOCATION",
@@ -182,20 +190,19 @@ class GameUI:
 
                         # Кнопка: Справочник жителей
                         ui.button('Справочник жителей', icon='people',
-                                  on_click=lambda: self.game_dialog.show_spravochnik_dialog(game_data,
-                                                                                            'people')).classes(
+                                  on_click=lambda: self.game_dialog.show_spravochnik_dialog(game_data,'people',game_ui=self,game_id=current_game_id)).classes(
                             'text-lg bg-blue-500 text-white')
 
                         # Кнопка: Справочник госструктур
                         ui.button('Справочник госструктур', icon='gavel',
                                   on_click=lambda: self.game_dialog.show_spravochnik_dialog(game_data,
-                                                                                            'gosplace')).classes(
+                                                                                            'gosplace',game_ui=self,game_id=current_game_id)).classes(
                             'text-lg bg-blue-500 text-white')
 
                         # Кнопка: Справочник общественных мест
                         ui.button('Справочник общественных мест', icon='map',
                                   on_click=lambda: self.game_dialog.show_spravochnik_dialog(game_data,
-                                                                                            'obplace')).classes(
+                                                                                            'obplace',game_ui=self,game_id=current_game_id)).classes(
                             'text-lg bg-blue-500 text-white')
 
                         # Кнопка: Обвинить жителя
@@ -209,6 +216,7 @@ class GameUI:
                             'text-lg bg-red-500 text-white')
         else:
             self.log_service.add_log(
+                level='GAME',
                 message=f"Показывание интерфейса для законченной игры",
                 user_id=user_id,
                 action="SHOW_FINISHED_GAME",
@@ -253,34 +261,42 @@ class GameUI:
 
         if not location_id:
             ui.notify('Укажите ID места', color='warning')
-            self.log_service.add_error_log(
-                error_message="Попытка поездки с пустым Айди места",
+            self.log_service.add_log(
+                level='GAME',
+                action='ERROR',
+                message="Попытка поездки с пустым Айди места",
                 user_id=user_id,
                 metadata={"game_id": game_id}
             )
             return
 
         game_data = self.game_state_service.get_game_state(game_id)
+        spravochnik = game_data.get('spravochnik', {})
 
         # Проверяем, существует ли место
-        if location_id not in game_data.get('place', {}) and location_id not in ['112102', '440321', '220123']:
+        if (location_id not in game_data.get('place', {})
+                and location_id not in ['112102', '440321', '220123']
+                and location_id not in spravochnik.get('obplace', {})
+                and location_id not in spravochnik.get('gosplace', {})
+                and location_id not in spravochnik.get('people', {})):
             game_data['move'] += 1
             ui.notify(f'Место с ID {location_id} не найдено', color='negative')
 
-            self.log_service.add_error_log(
-                error_message=f"Локация не найдена: {location_id}",
+            self.log_service.add_log(
+                level='GAME',
+                action='ERROR',
+                message=f"Локация не найдена: {location_id}",
                 user_id=user_id,
                 metadata={"game_id": game_id}
             )
             return
 
-        # Добавляем только ID в историю
         success = self.game_state_service.add_location_to_history(game_id, location_id)
 
         if success:
             ui.notify(f'Вы переместились в локацию {location_id}', color='positive')
-
             self.log_service.add_log(
+                level='GAME',
                 message=f"Пользователь успешно переместился в локацию: {location_id}",
                 user_id=user_id,
                 action="TRAVEL_SUCCESS",
@@ -290,7 +306,7 @@ class GameUI:
             # Обновляем данные игры
             self.refresh_game_data(game_id)
             # Обновляем только игровой интерфейс
-            self.show_game_interface()
+            self.show_game_interface
         else:
             ui.notify('Ошибка при перемещении', color='negative')
 
@@ -311,6 +327,7 @@ class GameUI:
             ui.notify('✅ Отличная работа! Вы раскрыли дело и нашли виновного!', color='emerald')
 
             self.log_service.add_log(
+                level='GAME',
                 message=f"Пользователь раскрыл дело и нашел виновного: {culprit['name']}",
                 user_id=user_id,
                 action="ACCUSE_CORRECT",
@@ -324,6 +341,7 @@ class GameUI:
             ui.notify('❌ Увы, это был не тот человек! Попробуйте ещё раз.', color='rose')
 
             self.log_service.add_log(
+                level='GAME',
                 message=f"Пользователь не правильно предположил {suspect_id}",
                 user_id=user_id,
                 action="ACCUSE_INCORRECT",
@@ -335,4 +353,4 @@ class GameUI:
             )
 
         self.game_state_service.increment_move(game_id)
-        self.show_game_interface()
+        self.show_game_interface

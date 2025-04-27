@@ -53,7 +53,7 @@ class UserUI:
                     self.admin_game_ui.table_game()
 
             with ui.tab_panel(five):
-                self.game_ui.show_game_interface()
+                self.game_ui.show_game_interface
             with ui.tab_panel(six):
                 self.user_profile.show_profile_ui(app.storage.user.get('user_id'))
 

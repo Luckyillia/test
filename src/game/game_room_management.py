@@ -37,7 +37,7 @@ class GameRoomManagement:
         with ui.dialog() as dialog, ui.card().classes('p-6 w-96'):
             ui.label('Присоединиться к игре').classes('text-xl font-bold mb-4')
 
-            game_id_input = ui.input(label='Введите ID места').classes('w-full mb-4')
+            game_id_input = None
             status_label = ui.label('').classes('mt-2')
 
             def try_join():
@@ -78,6 +78,7 @@ class GameRoomManagement:
                         metadata={"attempted_game_id": game_id}
                     )
 
+            game_id_input = ui.input(label='Введите ID места').classes('w-full mb-4').on('keydown.enter', try_join)
             with ui.row().classes('w-full justify-between'):
                 ui.button('Отмена', on_click=dialog.close).classes('bg-gray-300 dark:bg-gray-700')
                 ui.button('Войти', on_click=lambda: try_join()).classes('bg-blue-500 text-white')

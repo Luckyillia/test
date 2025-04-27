@@ -211,7 +211,7 @@ class GameStateService:
             return
         last_move_time = data[game_id].get('last_visited_at', 0)
         if last_move_time > self.game_ui.last_update:
-            self.game_ui.show_game_interface()
+            self.game_ui.show_game_interface
             self.game_ui.last_update = last_move_time
 
     def finishing_game(self, game_id):

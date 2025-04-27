@@ -51,11 +51,11 @@ class Registration:
             if len(self.password_input.value) >= 8:
                 # Try to add the user
                 if not self.user_service.add_user(
-                    self.name_input.value,
-                    self.surname_input.value,
-                    self.username_input.value,
-                    self.password_input.value,
-                    self.avatar_url
+                    self.name_input.value.strip(),
+                    self.surname_input.value.strip(),
+                    self.username_input.value.strip(),
+                    self.password_input.value.strip(),
+                    self.avatar_url.strip()
                 ):
                     ui.notify('Такой пользователь уже есть', color='red')
                     self.log_service.add_log(

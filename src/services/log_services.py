@@ -154,31 +154,24 @@ class LogService:
 
         return result
 
-    def get_logs_for_user(self, user_id, date=None):
-        logs = self.load_logs(date)
+    def get_logs_for_user(self, user_id, date=None, logs=None):
+        if not logs:
+            logs = self.load_logs(date)
         return [log for log in logs if log.get("user_id") == user_id]
 
-    def get_logs_by_level(self, level, date=None):
-        logs = self.load_logs(date)
+    def get_logs_by_level(self, level, date=None, logs=None):
+        if not logs:
+            logs = self.load_logs(date)
         return [log for log in logs if log.get("level") == level]
 
-    def get_logs_by_action(self, action, date=None):
-        logs = self.load_logs(date)
+    def get_logs_by_action(self, action, date=None, logs=None):
+        if not logs:
+            logs = self.load_logs(date)
         return [log for log in logs if log.get("action") == action]
 
-    def get_available_actions(self, date=None):
-        logs = self.load_logs(date)
-        actions = set()
-
-        for log in logs:
-            action = log.get('action')
-            if action:
-                actions.add(action)
-
-        return sorted(actions)
-
-    def search_logs(self, query, date=None):
-        logs = self.load_logs(date)
+    def search_logs(self, query, date=None, logs=None):
+        if not logs:
+            logs = self.load_logs(date)
         query = query.lower()
 
         results = []
@@ -198,9 +191,18 @@ class LogService:
 
         return results
 
+    def get_available_actions(self, date=None):
+        logs = self.load_logs(date)
+        actions = set()
+
+        for log in logs:
+            action = log.get('action')
+            if action:
+                actions.add(action)
+
+        return sorted(actions)
 
     def get_user_username(self, user_id):
-        """Get the username for a given user ID."""
         return self.available_users.get(user_id, f"User {user_id}")
 
     def log_interface(self):
@@ -208,6 +210,7 @@ class LogService:
 
         def update_logs():
             try:
+                self.load_users()
                 # Update available actions for the selected date
                 self.available_actions = ['ALL'] + self.get_available_actions(self.selected_date)
                 action_selector.options = self.available_actions
@@ -220,22 +223,16 @@ class LogService:
                 logs = self.load_logs(self.selected_date)
 
                 if self.level_filter != 'ALL':
-                    logs = [log for log in logs if log.get('level') == self.level_filter]
+                    logs = self.get_logs_by_level(self.level_filter, self.selected_date, logs)
 
                 if self.action_filter != 'ALL':
-                    logs = [log for log in logs if log.get('action') == self.action_filter]
+                    logs = self.get_logs_by_action(self.action_filter, self.selected_date, logs)
 
                 if self.user_filter:
-                    logs = self.get_logs_for_user(self.user_filter, self.selected_date)
+                    logs = self.get_logs_for_user(self.user_filter, self.selected_date, logs)
 
                 if self.search_query:
-                    query = self.search_query.lower()
-                    logs = [log for log in logs if (
-                            query in log.get('message', '').lower() or
-                            query in log.get('user_id', '').lower() or
-                            query in log.get('action', '').lower() or
-                            query in json.dumps(log.get('metadata', {})).lower()
-                    )]
+                    logs = self.search_logs(self.search_query, self.selected_date, logs)
 
                 # Clear existing log entries
                 log_container.clear()
@@ -248,10 +245,12 @@ class LogService:
                     for log in logs:
                         # Determine card color based on log level
                         level_colors = {
-                            'INFO': 'bg-blue-50 dark:bg-blue-800',
-                            'ERROR': 'bg-red-50 dark:bg-red-800',
-                            'DEBUG': 'bg-green-50 dark:bg-green-800',
-                            'SYSTEM': 'bg-purple-50 dark:bg-purple-800'
+                            'INFO': 'bg-cyan-100 dark:bg-cyan-700',  # Светло-бирюзовый / насыщенный бирюзовый
+                            'ERROR': 'bg-red-100 dark:bg-red-700',  # Светло-красный / тёмно-красный
+                            'DEBUG': 'bg-green-100 dark:bg-green-700',  # Светло-зелёный / тёмно-зелёный
+                            'SYSTEM': 'bg-purple-100 dark:bg-purple-700',  # Светло-фиолетовый / тёмно-фиолетовый
+                            'GAME': 'bg-pink-100 dark:bg-pink-700',  # Светло-розовый / насыщенный розовый
+                            'ADMIN': 'bg-indigo-100 dark:bg-indigo-700'  # Светло-индиговый / тёмно-индиговый
                         }
                         color_class = level_colors.get(log.get('level', ''), 'bg-gray-50 dark:bg-gray-800')
 
@@ -322,7 +321,7 @@ class LogService:
 
                         ui.icon('filter_alt').classes('text-xl')
                         ui.select(
-                            ['ALL', 'INFO', 'ERROR', 'DEBUG', 'SYSTEM'],
+                            ['ALL', 'INFO', 'ERROR', 'DEBUG', 'SYSTEM','GAME','ADMIN'],
                             value=self.level_filter,
                             on_change=lambda e: set_level(e.value)
                         ).classes('w-40')
