@@ -77,7 +77,7 @@ class UserProfile:
             ui.label('Пользователь не найден').classes('text-center text-2xl mt-10')
             self.log_service.add_error_log(f"Ошибка при отображении пользователя: {user_id} не найден")
             return
-        self.avatar = ui.label(f"Аватар: {user['avatar']}").classes('w-full')
+        self.avatar = ui.label(f"Аватар: {user['avatar']}").classes('w-full overflow-hidden')
         self.name = ui.label(f"Имя: {user['name']}").classes('w-full')
         self.surname = ui.label(f"Фамилия: {user['surname']}").classes('w-full')
         self.username = ui.label(f"Логин: {user['username']}").classes('w-full')
