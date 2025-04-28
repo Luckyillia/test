@@ -36,13 +36,12 @@ def login(redirect_to: str = '/') -> Optional[RedirectResponse]:
         for user in users:
             if user['username'] == username.value and user['password'] == password.value:
                 game_state_id = user['gameState']
-                color = user['color']
                 app.storage.user.update({
                     'username': username.value,
                     'user_id': user['id'],
                     'authenticated': True,
                     'game_state_id': game_state_id,
-                    'color': color
+                    'dark_mode': True
                 })
                 # Логируем успешный вход
                 log_service.add_user_action_log(
