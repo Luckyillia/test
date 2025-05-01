@@ -55,7 +55,7 @@ class UserUI:
                 with ui.tab_panel(three):
                     self.log_services.log_interface()
                 with ui.tab_panel(four):
-                    self.admin_game_ui.table_game()
+                    self.admin_game_ui.create_ui()
                 with ui.tab_panel(five):
                     self.game_room_management_ui.create_ui()
 

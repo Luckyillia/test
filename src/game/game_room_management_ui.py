@@ -208,6 +208,7 @@ class GameRoomManagementUI:
         self.room_data[room_id]['last_visited_at'] = int(time.time())
         self.room_data[room_id]['move'] = 0
         self.room_data[room_id]['location_history'] = []
+        self.room_data[room_id]['users'] = []
         self.room_data[room_id]['current_location'] = None
 
         self.room_manager.save(self.room_data)

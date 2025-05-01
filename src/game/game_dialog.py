@@ -73,12 +73,17 @@ class GameDialog:
 
             place_input = ui.input('Введите ID места').classes('w-full mb-4')
 
+            def try_travel():
+                self.game_ui.travel_to_location(current_room_id, place_input.value)
+                dialog.close()
+
+            # Attach Enter key event to the input field
+            place_input.on('keydown.enter', try_travel)
+
             with ui.row().classes('w-full justify-between'):
                 ui.button('Отмена', on_click=dialog.close).classes('bg-gray-300 dark:bg-gray-700')
-                ui.button('Пойти', on_click=lambda: [
-                    self.game_ui.travel_to_location(current_room_id, place_input.value),
-                    dialog.close()
-                ]).classes('bg-blue-500 text-white')
+                ui.button('Пойти', on_click=try_travel).classes('bg-blue-500 text-white')
+
         dialog.open()
 
     def show_accuse_dialog(self):

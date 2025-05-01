@@ -304,7 +304,6 @@ class GameUI:
                 and location_id not in spravochnik.get('gosplace', {})
                 and location_id not in spravochnik.get('people', {})):
             # Используем increment_move из game_room_management вместо прямого обновления
-            self.game_room_management.increment_move(room_id)
             ui.notify(f'Место с ID {location_id} не найдено', color='negative')
 
             self.log_service.add_log(
