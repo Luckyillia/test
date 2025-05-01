@@ -624,7 +624,7 @@ class AdminGameUI:
                 try:
                     self.game_state_service.create_game_state(game_id)
                     self.load_available_games()
-                    self.create_game_cards()
+                    self.refresh_ui()
                     ui.notify('Игра успешно создана', color='positive')
                     self.log_service.add_log(
                         level='ADMIN_GAME',
