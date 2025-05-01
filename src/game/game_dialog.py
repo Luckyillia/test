@@ -62,8 +62,8 @@ class GameDialog:
 
     def show_travel_dialog(self):
         """Показывает диалоговое окно для перемещения"""
-        current_game_id = app.storage.user.get('game_state_id')
-        if not current_game_id:
+        current_room_id = app.storage.user.get('game_state_id')
+        if not current_room_id:
             ui.notify('Нет активной игры', color='negative')
             return
 
@@ -76,13 +76,13 @@ class GameDialog:
             with ui.row().classes('w-full justify-between'):
                 ui.button('Отмена', on_click=dialog.close).classes('bg-gray-300 dark:bg-gray-700')
                 ui.button('Пойти', on_click=lambda: [
-                    self.game_ui.travel_to_location(current_game_id, place_input.value),
+                    self.game_ui.travel_to_location(current_room_id, place_input.value),
                     dialog.close()
                 ]).classes('bg-blue-500 text-white')
         dialog.open()
 
     def show_accuse_dialog(self):
-        current_game_id = app.storage.user.get('game_state_id')
+        current_room_id = app.storage.user.get('game_state_id')
         with ui.dialog() as dialog, ui.card().classes('p-6 w-96'):
             ui.label('Кого вы подозреваете?').classes('text-xl font-bold mb-4')
             suspect_input = ui.input('Введите ID жителя').classes('w-full mb-4')
@@ -93,7 +93,7 @@ class GameDialog:
                 if not suspect_id:
                     status_label.text = 'Введите ID жителя.'
                     return
-                self.game_ui.accuse_suspect(current_game_id, suspect_id)
+                self.game_ui.accuse_suspect(current_room_id, suspect_id)
                 dialog.close()
 
             with ui.row().classes('w-full justify-between'):

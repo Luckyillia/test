@@ -321,7 +321,7 @@ class LogService:
 
                         ui.icon('filter_alt').classes('text-xl')
                         ui.select(
-                            ['ALL', 'INFO', 'ERROR', 'DEBUG', 'SYSTEM','GAME','ADMIN'],
+                            ['ALL', 'INFO', 'ERROR', 'DEBUG', 'SYSTEM','GAME','ROOM','ADMIN_GAME','ADMIN_ROOM'],
                             value=self.level_filter,
                             on_change=lambda e: set_level(e.value)
                         ).classes('w-40')

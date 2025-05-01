@@ -8,8 +8,8 @@ from src.services.log_services import LogService
 
 class AdminGameUI:
     def __init__(self):
-        self.game_state_service = GameStateService(self)
-        self.game_room_management = GameRoomManagement(self.game_state_service)
+        self.game_state_service = GameStateService()
+        self.game_room_management = GameRoomManagement()
         self.log_service = LogService()
         self.available_games = {}
         self.load_available_games()
@@ -22,7 +22,7 @@ class AdminGameUI:
             error_message = f'Ошибка загрузки игр: {str(e)}'
             ui.notify(error_message, color='negative')
             self.log_service.add_log(
-                level='ADMIN',
+                level='ADMIN_GAME',
                 action='ERROR',
                 message=error_message,
                 user_id=app.storage.user.get('user_id', None),
@@ -39,7 +39,7 @@ class AdminGameUI:
                 error_message = f'Поле "{field_names[i]}" не заполнено!'
                 ui.notify(error_message, color='negative')
                 self.log_service.add_log(
-                    level='ADMIN',
+                    level='ADMIN_GAME',
                     action='ERROR',
                     message=error_message,
                     user_id=app.storage.user.get('user_id', None),
@@ -54,7 +54,7 @@ class AdminGameUI:
         if self.available_games:
             for game_id in self.available_games.keys():
                 with ui.card().classes('w-full p-4'):
-                    with ui.expansion(f'Айди игры: {game_id}', icon='description', group='admin').classes('w-full'):
+                    with ui.expansion(f'Айди игры: {game_id}', icon='description', group='ADMIN_GAME').classes('w-full'):
                         with ui.column().classes('w-full'):
                             with ui.row().classes('w-full items-center mb-4'):
                                 # Кнопка обновления данных
@@ -63,9 +63,9 @@ class AdminGameUI:
                                     self.display_games_list.refresh(),
                                     ui.notify('Данные обновлены'),
                                     self.log_service.add_log(
-                                        level='ADMIN',
+                                        level='ADMIN_GAME',
                                         user_id=app.storage.user.get('user_id', None),
-                                        action="ADMIN_REFRESH_GAME",
+                                        action="ADMIN_GAME_REFRESH_GAME",
                                         message=f"Администратор обновил данные игры {gid}",
                                         metadata={"game_id": gid}
                                     )
@@ -79,9 +79,9 @@ class AdminGameUI:
                                     self.display_games_list.refresh(),
                                     ui.notify('Игра удалена'),
                                     self.log_service.add_log(
-                                        level='ADMIN',
+                                        level='ADMIN_GAME',
                                         user_id=app.storage.user.get('user_id', None),
-                                        action="ADMIN_DELETE_GAME",
+                                        action="ADMIN_GAME_DELETE_GAME",
                                         message=f"Администратор удалил игру {gid}",
                                         metadata={"game_id": gid}
                                     )
@@ -97,9 +97,9 @@ class AdminGameUI:
                                         self.display_games_list.refresh(),
                                         ui.notify('Игра была перезапущена'),
                                         self.log_service.add_log(
-                                            level='ADMIN',
+                                            level='ADMIN_GAME',
                                             user_id=app.storage.user.get('user_id', None),
-                                            action="ADMIN_RESET_GAME",
+                                            action="ADMIN_GAME_RESET_GAME",
                                             message=f"Администратор перезапустил игру {gid}",
                                             metadata={"game_id": gid}
                                         )
@@ -133,12 +133,13 @@ class AdminGameUI:
                                                 data[gid] = {**data[gid], 'start': begin_text_input.value}
                                                 self.game_state_service.save(data)
                                                 begin_text_input.set_value('')
+                                                self.load_available_games()
                                                 refresh_begin_text()
                                                 ui.notify('Начальный текст сохранен')
                                                 self.log_service.add_log(
-                                                    level='ADMIN',
+                                                    level='ADMIN_GAME',
                                                     user_id=app.storage.user.get('user_id', None),
-                                                    action="ADMIN_EDIT_START_TEXT",
+                                                    action="ADMIN_GAME_EDIT_START_TEXT",
                                                     message=f"Администратор изменил начальный текст игры {gid}",
                                                     metadata={"game_id": gid}
                                                 )
@@ -168,12 +169,13 @@ class AdminGameUI:
 
                                                 self.game_state_service.edit_gazeta(gid, gazeta_input.value)
                                                 gazeta_input.set_value('')
+                                                self.load_available_games()
                                                 refresh_gazeta()
                                                 ui.notify('Газета обновлена')
                                                 self.log_service.add_log(
-                                                    level='ADMIN',
+                                                    level='ADMIN_GAME',
                                                     user_id=app.storage.user.get('user_id', None),
-                                                    action="ADMIN_EDIT_GAZETA",
+                                                    action="ADMIN_GAME_EDIT_GAZETA",
                                                     message=f"Администратор изменил текст газеты в игре {gid}",
                                                     metadata={"game_id": gid}
                                                 )
@@ -213,12 +215,13 @@ class AdminGameUI:
                                                 )
                                                 new_person_input_id.set_value('')
                                                 new_person_input_text.set_value('')
+                                                self.load_available_games()
                                                 refresh_people()
                                                 ui.notify('Добавлено в справочник')
                                                 self.log_service.add_log(
-                                                    level='ADMIN',
+                                                    level='ADMIN_GAME',
                                                     user_id=app.storage.user.get('user_id', None),
-                                                    action="ADMIN_ADD_PERSON",
+                                                    action="ADMIN_GAME_ADD_PERSON",
                                                     message=f"Администратор добавил человека '{person_id}' в игру {gid}",
                                                     metadata={"game_id": gid, "person_id": person_id}
                                                 )
@@ -260,12 +263,13 @@ class AdminGameUI:
                                                 )
                                                 new_gosplace_input_id.set_value('')
                                                 new_gosplace_input_text.set_value('')
+                                                self.load_available_games()
                                                 refresh_gosplaces()
                                                 ui.notify('Добавлено в справочник')
                                                 self.log_service.add_log(
-                                                    level='ADMIN',
+                                                    level='ADMIN_GAME',
                                                     user_id=app.storage.user.get('user_id', None),
-                                                    action="ADMIN_ADD_GOSPLACE",
+                                                    action="ADMIN_GAME_ADD_GOSPLACE",
                                                     message=f"Администратор добавил гос. место '{place_id}' в игру {gid}",
                                                     metadata={"game_id": gid, "place_id": place_id}
                                                 )
@@ -308,12 +312,13 @@ class AdminGameUI:
                                                 )
                                                 new_obplace_input_id.set_value('')
                                                 new_obplace_input_text.set_value('')
+                                                self.load_available_games()
                                                 refresh_obplaces()
                                                 ui.notify('Добавлено в справочник')
                                                 self.log_service.add_log(
-                                                    level='ADMIN',
+                                                    level='ADMIN_GAME',
                                                     user_id=app.storage.user.get('user_id', None),
-                                                    action="ADMIN_ADD_OBPLACE",
+                                                    action="ADMIN_GAME_ADD_OBPLACE",
                                                     message=f"Администратор добавил общественное место '{place_id}' в игру {gid}",
                                                     metadata={"game_id": gid, "place_id": place_id}
                                                 )
@@ -367,12 +372,13 @@ class AdminGameUI:
                                                 )
                                                 police_text_input.set_value('')
                                                 police_delo_input.set_value('')
+                                                self.load_available_games()
                                                 refresh_police()
                                                 ui.notify('Полиция обновлена')
                                                 self.log_service.add_log(
-                                                    level='ADMIN',
+                                                    level='ADMIN_GAME',
                                                     user_id=app.storage.user.get('user_id', None),
-                                                    action="ADMIN_UPDATE_POLICE",
+                                                    action="ADMIN_GAME_UPDATE_POLICE",
                                                     message=f"Администратор обновил данные полиции в игре {gid}",
                                                     metadata={"game_id": gid, "has_delo": bool(police_delo_input.value)}
                                                 )
@@ -426,12 +432,13 @@ class AdminGameUI:
                                                 )
                                                 morg_text_input.set_value('')
                                                 morg_vskrytie_input.set_value('')
+                                                self.load_available_games()
                                                 refresh_morg()
                                                 ui.notify('Морг обновлен')
                                                 self.log_service.add_log(
-                                                    level='ADMIN',
+                                                    level='ADMIN_GAME',
                                                     user_id=app.storage.user.get('user_id', None),
-                                                    action="ADMIN_UPDATE_MORG",
+                                                    action="ADMIN_GAME_UPDATE_MORG",
                                                     message=f"Администратор обновил данные морга в игре {gid}",
                                                     metadata={"game_id": gid, "has_vskrytie": bool(morg_vskrytie_input.value)}
                                                 )
@@ -486,12 +493,13 @@ class AdminGameUI:
                                                 )
                                                 zags_text_input.set_value('')
                                                 zags_otchet_input.set_value('')
+                                                self.load_available_games()
                                                 refresh_zags()
                                                 ui.notify('ЗАГС обновлен')
                                                 self.log_service.add_log(
-                                                    level='ADMIN',
+                                                    level='ADMIN_GAME',
                                                     user_id=app.storage.user.get('user_id', None),
-                                                    action="ADMIN_UPDATE_ZAGS",
+                                                    action="ADMIN_GAME_UPDATE_ZAGS",
                                                     message=f"Администратор обновил данные ЗАГСа в игре {gid}",
                                                     metadata={"game_id": gid, "has_otchet": bool(zags_otchet_input.value)}
                                                 )
@@ -533,12 +541,13 @@ class AdminGameUI:
                                                     )
                                                     place_id_input.set_value('')
                                                     place_text_input.set_value('')
+                                                    self.load_available_games()
                                                     refresh_places()
                                                     ui.notify('Место добавлено')
                                                     self.log_service.add_log(
-                                                        level='ADMIN',
+                                                        level='ADMIN_GAME',
                                                         user_id=app.storage.user.get('user_id', None),
-                                                        action="ADMIN_ADD_PLACE",
+                                                        action="ADMIN_GAME_ADD_PLACE",
                                                         message=f"Администратор добавил место '{place_id}' в игру {gid}",
                                                         metadata={"game_id": gid, "place_id": place_id}
                                                     )
@@ -589,12 +598,13 @@ class AdminGameUI:
                                                     culprit_id_input.set_value('')
                                                     culprit_text_input.set_value('')
                                                     culprit_endtext_input.set_value('')
+                                                    self.load_available_games()
                                                     refresh_culprit()
                                                     ui.notify('Виновный обновлен')
                                                     self.log_service.add_log(
-                                                        level='ADMIN',
+                                                        level='ADMIN_GAME',
                                                         user_id=app.storage.user.get('user_id', None),
-                                                        action="ADMIN_SET_CULPRIT",
+                                                        action="ADMIN_GAME_SET_CULPRIT",
                                                         message=f"Администратор установил виновного '{culprit_id}' в игре {gid}",
                                                         metadata={
                                                             "game_id": gid,
@@ -610,55 +620,6 @@ class AdminGameUI:
 
                                     culprit_container = ui.column().classes('w-full')
                                     refresh_culprit()
-
-                                with ui.expansion('Статус игры', icon='flag', group='element').classes('w-full'):
-                                    def refresh_status(gid=game_id):
-                                        current_status = self.game_state_service.get_game_state(gid).get('status', '')
-                                        status_container.clear()
-                                        with status_container:
-                                            with ui.card().classes('w-full p-4 bg-blue-50 dark:bg-blue-900'):
-                                                status_select = ui.select(
-                                                    options=[
-                                                        'playing',
-                                                        'finished'
-                                                    ],
-                                                    value=current_status or 'playing',  # Default to 'playing' if empty
-                                                    label='Выберите статус игры'
-                                                ).classes('w-full')
-
-                                                def save_status():
-                                                    if not self.validate_fields(
-                                                            status_select,
-                                                            field_names=["Статус игры"]
-                                                    ):
-                                                        return
-
-                                                    new_status = status_select.value
-                                                    old_status = self.game_state_service.get_game_state(gid).get(
-                                                        'status', '')
-
-                                                    self.game_state_service.edit_game_status(gid, new_status)
-                                                    refresh_status()
-                                                    ui.notify('Статус игры обновлен')
-                                                    self.log_service.add_log(
-                                                        level='ADMIN',
-                                                        user_id=app.storage.user.get('user_id', None),
-                                                        action="ADMIN_UPDATE_GAME_STATUS",
-                                                        message=f"Администратор изменил статус игры {gid} с '{old_status or 'не установлен'}' на '{new_status}'",
-                                                        metadata={
-                                                            "game_id": gid,
-                                                            "old_status": old_status or 'not_set',
-                                                            "new_status": new_status
-                                                        }
-                                                    )
-
-                                                ui.button(
-                                                    'Затвердить статус',
-                                                    on_click=save_status
-                                                ).classes('mt-2')
-
-                                    status_container = ui.column().classes('w-full')
-                                    refresh_status()
 
         else:
             ui.label('Выберите игру из списка выше или создайте новую').classes(
@@ -689,8 +650,8 @@ class AdminGameUI:
                     self.display_games_list.refresh()
                     ui.notify('Игра успешно создана', color='positive')
                     self.log_service.add_log(
-                        level='ADMIN',
-                        action='ADMIN_CREATE_GAME',
+                        level='ADMIN_GAME',
+                        action='ADMIN_GAME_CREATE_GAME',
                         message=f'Игра {game_id} успешно создана',
                         user_id=app.storage.user.get('user_id', None),
                         metadata={'game_id': game_id}
@@ -699,7 +660,7 @@ class AdminGameUI:
                 except Exception as e:
                     ui.notify(f'Ошибка при создании игры: {str(e)}', color='negative')
                     self.log_service.add_log(
-                        level='ADMIN',
+                        level='ADMIN_GAME',
                         action='ERROR',
                         message=f'Ошибка при создании игры: {str(e)}',
                         user_id=app.storage.user.get('user_id', None),

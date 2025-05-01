@@ -7,8 +7,7 @@ from nicegui import app
 
 
 class GameStateService:
-    def __init__(self, game_ui, filepath='data/gameState.json'):
-        self.game_ui = game_ui
+    def __init__(self, filepath='data/gameState.json'):
         self.filepath = filepath
         self.ensure_file_exists()
 
@@ -72,8 +71,7 @@ class GameStateService:
                     'id': None,
                     'name': None,
                     'endText': None
-                },
-                'status': 'playing'
+                }
             }
             self.save(data)
 
@@ -165,74 +163,4 @@ class GameStateService:
         data = self.load()
         if game_id in data:
             del data[game_id]
-            self.save(data)
-
-    def add_location_to_history(self, game_id, location_id):
-        """Добавляет ID локации в историю перемещений игрока"""
-        data = self.load()
-        if game_id not in data:
-            return False
-
-        if 'location_history' not in data[game_id]:
-            data[game_id]['location_history'] = []
-
-        location_entry = {
-            'id': location_id,
-            'visited_at': int(time.time())
-        }
-
-        data[game_id]['location_history'].append(location_entry)
-        data[game_id]['current_location'] = location_id
-        data[game_id]['last_visited_at'] = int(time.time())
-        data[game_id]['move'] = data[game_id].get('move', 0) + 1
-
-        return self.save(data)
-
-    def get_location_history(self, game_id):
-        """Возвращает историю перемещений игрока"""
-        data = self.load()
-        if game_id not in data:
-            return []
-
-        return data[game_id].get('location_history', [])
-
-    def get_current_location(self, game_id):
-        """Возвращает текущую локацию игрока"""
-        data = self.load()
-        if game_id not in data:
-            return None
-
-        return data[game_id].get('current_location', None)
-
-    def check_for_updates(self):
-        data = self.load()
-        game_id = app.storage.user.get('game_state_id')
-        if game_id not in data:
-            return
-        last_move_time = data[game_id].get('last_visited_at', 0)
-        if last_move_time > self.game_ui.last_update:
-            self.game_ui.show_game_interface
-            self.game_ui.last_update = last_move_time
-
-    def finishing_game(self, game_id):
-        data = self.load()
-        if game_id in data:
-            data[game_id]['status'] = 'finished'
-            data[game_id]['last_visited_at'] = int(time.time())
-            self.save(data)
-
-    def reset_game(self, game_id):
-        data = self.load()
-        if game_id in data:
-            data[game_id]['status'] = 'playing'
-            data[game_id]['last_visited_at'] = 0
-            data[game_id]['move'] = 0
-            data[game_id]['location_history'] = []
-            data[game_id]['current_location'] = None
-            self.save(data)
-
-    def increment_move(self, game_id):
-        data = self.load()
-        if game_id in data:
-            data[game_id]['move'] = data[game_id].get('move', 0) + 1
             self.save(data)
