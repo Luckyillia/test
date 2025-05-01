@@ -147,7 +147,7 @@ class GameRoomManagementUI:
         if room_id not in self.room_data:
             return
 
-        with ui.dialog() as dialog, ui.card().classes('p-6 w-96'):
+        with ui.dialog() as dialog, ui.card().classes('p-6 w-full max-w-3xl'):
             ui.label(f'Пользователи в комнате {room_id}').classes('text-xl font-bold mb-4')
 
             user_list = self.room_data[room_id].get('users', [])
@@ -207,6 +207,7 @@ class GameRoomManagementUI:
         self.room_data[room_id]['status'] = 'playing'
         self.room_data[room_id]['last_visited_at'] = int(time.time())
         self.room_data[room_id]['move'] = 0
+        self.room_data[room_id]['tooltip'] = False
         self.room_data[room_id]['location_history'] = []
         self.room_data[room_id]['users'] = []
         self.room_data[room_id]['current_location'] = None

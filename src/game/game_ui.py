@@ -138,6 +138,8 @@ class GameUI:
                                 location_name = obplace[location_id]
                             elif location_id == "start":
                                 location_name = 'Вводные данные'
+                            elif location_id == game_data['tooltip']['location_id']:
+                                location_name = "Подсказка"
                             else:
                                 location_name = 'Неизвестная локация'
 
@@ -278,6 +280,19 @@ class GameUI:
                         'mt-6 bg-blue-600 hover:bg-blue-700 text-white text-lg w-full rounded-lg py-2')
             return
 
+    def check_tooltip(self,room_id):
+        room_data = self.game_room_management.get_game_state(room_id)
+        game_data = self.game_state_service.get_game_state(room_data['game_id'])
+        if game_data['tooltip']['count'] <= room_data['move'] and room_data['tooltip'] == False:
+            self.game_room_management.add_location_to_history(room_id, game_data['tooltip']['location_id'], tooltip=True)
+            self.log_service.add_debug_log(
+                message="Подсказка была добавлена",
+                user_id=app.storage.user.get('user_id'),
+                action="TOOLTIP",
+                metadata={"room_id": room_id}
+            )
+
+
     def travel_to_location(self, room_id, location_id):
         """Логика перемещения в новую локацию"""
         user_id = app.storage.user.get('user_id')
@@ -340,6 +355,7 @@ class GameUI:
                 user_id=user_id,
                 metadata={"room_id": room_id, "location_id": location_id}
             )
+        self.check_tooltip(room_id)
 
     def accuse_suspect(self, room_id, suspect_id):
         """Обвинить подозреваемого"""

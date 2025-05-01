@@ -71,6 +71,10 @@ class GameStateService:
                     'id': None,
                     'name': None,
                     'endText': None
+                },
+                "tooltip": {
+                    "count": None,
+                    "location_id": None
                 }
             }
             self.save(data)
@@ -133,6 +137,12 @@ class GameStateService:
     def add_obplace(self, game_id, place_id, place_text):
         data = self.ensure_game_exists(game_id)
         data[game_id]['spravochnik']['obplace'][place_id] = place_text
+        self.save(data)
+
+    def add_tooltip(self,game_id,count,location_id):
+        data = self.load()
+        data[game_id]['tooltip']['count'] = int(count)
+        data[game_id]['tooltip']['location_id'] = location_id
         self.save(data)
 
     def get_game_state(self, game_id):

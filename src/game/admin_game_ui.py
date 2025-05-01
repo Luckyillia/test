@@ -602,6 +602,57 @@ class AdminGameUI:
                                         culprit_container = ui.column().classes('w-full')
                                         refresh_culprit()
 
+                                    # Подсказка
+                                    with ui.expansion('Подсказка', icon='psychology', group='element').classes(
+                                            'w-full'):
+                                        def refresh_tooltip(gid=game_id):
+                                            current_data = self.game_state_service.get_game_state(gid).get('tooltip',
+                                                                                                           {})
+                                            tooltip_container.clear()
+                                            with tooltip_container:
+                                                if current_data.get('count') and current_data.get('location_id'):
+                                                    with ui.card().classes('w-full mb-4 p-3'):
+                                                        ui.label(f'Кол.ходов: {current_data['count']}').classes('font-bold')
+                                                        ui.label(f'ID локации: {current_data['location_id']}').classes('font-bold')
+                                                with ui.card().classes('w-full p-4 bg-blue-50 dark:bg-blue-900'):
+                                                    count_step_input = ui.input('Число ходов').classes('w-full')
+                                                    location_id_input = ui.textarea('ID места').classes('w-full mt-2')
+
+                                                    def add_tooltip():
+                                                        if not self.validate_fields(
+                                                                count_step_input, location_id_input,
+                                                                field_names=["Число ходов", "ID места"]
+                                                        ):
+                                                            return
+
+                                                        count = count_step_input.value
+                                                        location_id = location_id_input.value
+                                                        self.game_state_service.add_tooltip(
+                                                            gid,
+                                                            count,
+                                                            location_id
+                                                        )
+                                                        count_step_input.set_value('')
+                                                        location_id_input.set_value('')
+                                                        self.load_available_games()
+                                                        refresh_tooltip()
+                                                        ui.notify('Подсказка добавлено')
+                                                        self.log_service.add_log(
+                                                            level='ADMIN_GAME',
+                                                            user_id=app.storage.user.get('user_id', None),
+                                                            action="ADMIN_GAME_ADD_TOOLTIP",
+                                                            message=f"Администратор добавил подсказку на '{count}' ходе в игру {gid}",
+                                                            metadata={"game_id": gid, "location_id":location_id,"count": count}
+                                                        )
+
+                                                    ui.button(
+                                                        'Добавить',
+                                                        on_click=add_tooltip
+                                                    ).classes('mt-2')
+
+                                        tooltip_container = ui.column().classes('w-full')
+                                        refresh_tooltip()
+
         else:
             ui.label('Выберите игру из списка выше или создайте новую').classes(
                 'text-center w-full p-8 text-gray-500 italic')

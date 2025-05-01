@@ -180,7 +180,7 @@ class GameRoomManagement:
         data = self.load()
         return data.get(room_id, {})
 
-    def add_location_to_history(self, room_id, location_id):
+    def add_location_to_history(self, room_id, location_id, tooltip=False):
         """Добавляет ID локации в историю перемещений игрока"""
         data = self.load()
         if room_id not in data:
@@ -202,7 +202,10 @@ class GameRoomManagement:
         data[room_id]['location_history'].append(location_entry)
         data[room_id]['current_location'] = location_id
         data[room_id]['last_visited_at'] = int(time.time())
-        data[room_id]['move'] = data[room_id].get('move', 0) + 1
+        if not tooltip:
+            data[room_id]['move'] = data[room_id].get('move', 0) + 1
+        if tooltip:
+            data[room_id]['tooltip'] = True
 
         self.log_service.add_system_log(
             user_id=app.storage.user.get('user_id'),
@@ -267,7 +270,6 @@ class GameRoomManagement:
             )
 
     def accuse_suspect(self, room_id, suspect_id):
-        """Проверяет, является ли подозреваемый виновным"""
         room_data = self.get_game_state(room_id)
         game_data = self.game_state_service.get_game_state(room_data['game_id'])
         culprit = game_data.get('isCulprit', {})
@@ -300,7 +302,6 @@ class GameRoomManagement:
         return result
 
     def finishing_game(self, room_id):
-        """Завершает игру"""
         data = self.load()
         if room_id in data:
             data[room_id]['status'] = 'finished'
@@ -316,7 +317,6 @@ class GameRoomManagement:
         return False
 
     def reset_game(self, room_id):
-        """Сбрасывает прогресс игры"""
         data = self.load()
         if room_id in data:
             data[room_id]['status'] = 'playing'
@@ -368,16 +368,6 @@ class GameRoomManagement:
         return False
 
     def remove_user_from_room(self, user_id, room_id):
-        """
-        Removes a user from a game room's user list
-
-        Args:
-            user_id: The ID of the user to remove
-            room_id: The ID of the room to remove the user from
-
-        Returns:
-            bool: True if successful, False otherwise
-        """
         data = self.load()
         if room_id in data:
             if 'users' in data[room_id]:
