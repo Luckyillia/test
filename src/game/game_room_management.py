@@ -10,7 +10,7 @@ class GameRoomManagement:
     def __init__(self, filepath='data/gameRoomState.json', game_ui=None):
         self.filepath = filepath
         self.user_service = UserService()
-        self.game_state_service = GameStateService()
+        self.game_state_service = GameStateService()  # Теперь использует обновленный класс с файлами для каждой игры
         self.log_service = LogService()
         self.game_ui = game_ui
         self.ensure_file_exists()
@@ -60,7 +60,6 @@ class GameRoomManagement:
         data = self.load()
         return room_id in data
 
-
     def leave_game(self, game_ui):
         if not app.storage.user.get('game_state_id'):
             ui.notify('В данный момент ты не находишься в комнате', type='warning')
@@ -79,7 +78,7 @@ class GameRoomManagement:
         self.log_service.add_user_action_log(
             user_id=app.storage.user.get('user_id'),
             action="leave_game",
-            message=f"Пользователь покинул игру (game_state_id={game_state_id})",
+            message=f"Пользователь покинул игру",
             metadata={"previous_game_state_id": game_state_id}
         )
 
@@ -178,7 +177,11 @@ class GameRoomManagement:
     def get_game_state(self, room_id):
         """Возвращает данные игры по идентификатору"""
         data = self.load()
-        return data.get(room_id, {})
+        room_data = data.get(room_id, {})
+
+        if room_data:
+            return room_data
+        return {}
 
     def add_location_to_history(self, room_id, location_id, tooltip=False):
         """Добавляет ID локации в историю перемещений игрока"""
@@ -196,21 +199,29 @@ class GameRoomManagement:
 
         location_entry = {
             'id': location_id,
-            'visited_at': int(time.time())
+            'visited_at': int(time.time()),
+            'is_tooltip': tooltip  # Сохраняем флаг, что это подсказка
         }
 
         data[room_id]['location_history'].append(location_entry)
         data[room_id]['current_location'] = location_id
         data[room_id]['last_visited_at'] = int(time.time())
+
+        # Увеличиваем счетчик ходов ТОЛЬКО если это не подсказка
         if not tooltip:
             data[room_id]['move'] = data[room_id].get('move', 0) + 1
-        if tooltip:
-            data[room_id]['tooltip'] = True
 
+        # Улучшенное логирование
+        log_message = "Подсказка добавлена" if tooltip else "Локация добавлена"
         self.log_service.add_system_log(
             user_id=app.storage.user.get('user_id'),
-            message=f"Добавлена локация в историю перемещений",
-            metadata={"room_id": room_id, "location_id": location_id, "move": data[room_id]['move']}
+            message=f"{log_message} в историю перемещений",
+            metadata={
+                "room_id": room_id,
+                "location_id": location_id,
+                "move": data[room_id]['move'],
+                "is_tooltip": tooltip
+            }
         )
 
         return self.save(data)
@@ -244,7 +255,7 @@ class GameRoomManagement:
     def check_for_updates(self):
         """Проверяет обновления в игре и обновляет интерфейс при необходимости"""
         if not hasattr(self, 'game_ui') or self.game_ui is None:
-            print('F')
+
             self.log_service.add_error_log(
                 error_message="Ошибка при проверке обновлений: game_ui не инициализирован",
                 user_id=app.storage.user.get('user_id')
@@ -270,8 +281,20 @@ class GameRoomManagement:
             )
 
     def accuse_suspect(self, room_id, suspect_id):
-        room_data = self.get_game_state(room_id)
-        game_data = self.game_state_service.get_game_state(room_data['game_id'])
+        room_data = self.load().get(room_id, {})
+        # Получаем game_id из данных комнаты
+        game_id = room_data.get('game_id')
+
+        if not game_id:
+            self.log_service.add_error_log(
+                error_message=f"Не удалось получить game_id для комнаты {room_id}",
+                user_id=app.storage.user.get('user_id'),
+                metadata={"room_id": room_id}
+            )
+            return False
+
+        # Используем обновленный GameStateService для получения данных игры
+        game_data = self.game_state_service.get_game_state(game_id)
         culprit = game_data.get('isCulprit', {})
 
         # ID подозреваемого(ых), разделяем по пробелам и очищаем
@@ -293,6 +316,7 @@ class GameRoomManagement:
             message=f"Пользователь обвинил подозреваемого",
             metadata={
                 "room_id": room_id,
+                "game_id": game_id,
                 "suspect_id": suspect_id,
                 "culprit_id": culprit.get('id'),
                 "result": result
@@ -400,3 +424,11 @@ class GameRoomManagement:
                 metadata={"room_id": room_id}
             )
         return False
+
+    def location_visited(self, room_id, location_id, status=False):
+        data = self.load()
+        if room_id in data:
+            for location_visited in data[room_id]['location_history']:
+                if location_id == location_visited['id']:
+                    location_visited['open'] = status
+        self.save(data)

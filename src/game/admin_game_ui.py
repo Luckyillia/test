@@ -10,14 +10,15 @@ class AdminGameUI:
         self.game_state_service = GameStateService()
         self.game_room_management = GameRoomManagement()
         self.log_service = LogService()
-        self.available_games = {}
+        self.game_ids = []  # Список ID игр вместо словаря
         self.load_available_games()
         # Данные о комнатах и играх
         self.display_container = None
 
     def load_available_games(self):
         try:
-            self.available_games = self.game_state_service.load()
+            # Получаем список ID игр вместо загрузки всех данных
+            self.game_ids = self.game_state_service.list_all_games()
         except Exception as e:
             error_message = f'Ошибка загрузки игр: {str(e)}'
             ui.notify(error_message, color='negative')
@@ -28,7 +29,7 @@ class AdminGameUI:
                 user_id=app.storage.user.get('user_id', None),
                 metadata={"action": "load_available_games"}
             )
-            self.available_games = {}
+            self.game_ids = []
 
     def validate_fields(self, *fields, field_names=None):
         if field_names is None:
@@ -50,9 +51,9 @@ class AdminGameUI:
 
     def create_game_cards(self):
         """Динамически обновляемый список игр"""
-        if self.available_games:
+        if self.game_ids:
             with self.display_container:
-                for game_id in self.available_games.keys():
+                for game_id in self.game_ids:
                     with ui.card().classes('w-full p-4'):
                         with ui.expansion(f'Айди игры: {game_id}', icon='description', group='ADMIN_GAME').classes('w-full'):
                             with ui.column().classes('w-full'):
@@ -90,6 +91,7 @@ class AdminGameUI:
                                     with ui.expansion('Начальный текст', icon='text_format', group='element').classes(
                                             'w-full'):
                                         def refresh_begin_text(gid=game_id):
+                                            # Загружаем данные только для конкретной игры
                                             current_data = self.game_state_service.get_game_state(gid)
                                             begin_text_container.clear()
                                             with begin_text_container:
@@ -109,10 +111,12 @@ class AdminGameUI:
                                                                                 field_names=["Начальный текст"]):
                                                         return
 
-                                                    self.game_state_service.ensure_game_exists(gid)
-                                                    data = self.game_state_service.load()
-                                                    data[gid] = {**data[gid], 'start': begin_text_input.value}
-                                                    self.game_state_service.save(data)
+                                                    # Получаем текущие данные игры
+                                                    game_data = self.game_state_service.get_game_state(gid) or {}
+                                                    # Обновляем поле start
+                                                    game_data['start'] = begin_text_input.value
+                                                    # Сохраняем обратно
+                                                    self.game_state_service.save(gid, game_data)
                                                     begin_text_input.set_value('')
                                                     self.load_available_games()
                                                     refresh_begin_text()
@@ -139,10 +143,10 @@ class AdminGameUI:
                                             current_data = self.game_state_service.get_game_state(gid)
                                             content_container.clear()
                                             with content_container:
-                                                if current_data.get('gazeta'):
+                                                if current_data and current_data.get('gazeta'):
                                                     ui.markdown(current_data['gazeta']).classes('whitespace-pre-wrap')
                                                 gazeta_input = ui.textarea('Редактировать газету').classes('w-full')
-                                                gazeta_input.value = current_data.get('gazeta', '')
+                                                gazeta_input.value = current_data.get('gazeta', '') if current_data else ''
 
                                                 def save_gazeta():
                                                     if not self.validate_fields(gazeta_input, field_names=["Текст газеты"]):
@@ -150,7 +154,6 @@ class AdminGameUI:
 
                                                     self.game_state_service.edit_gazeta(gid, gazeta_input.value)
                                                     gazeta_input.set_value('')
-                                                    self.load_available_games()
                                                     refresh_gazeta()
                                                     ui.notify('Газета обновлена')
                                                     self.log_service.add_log(
@@ -175,11 +178,12 @@ class AdminGameUI:
                                             current_data = self.game_state_service.get_game_state(gid)
                                             people_container.clear()
                                             with people_container:
-                                                for person_id, person_text in current_data.get('spravochnik', {}).get(
-                                                        'people', {}).items():
-                                                    with ui.card().classes('w-full mb-2 p-3'):
-                                                        ui.label(f'**{person_id}**: {person_text}').classes(
-                                                            'whitespace-pre-wrap')
+                                                if current_data:
+                                                    for person_id, person_text in current_data.get('spravochnik', {}).get(
+                                                            'people', {}).items():
+                                                        with ui.card().classes('w-full mb-2 p-3'):
+                                                            ui.label(f'**{person_id}**: {person_text}').classes(
+                                                                'whitespace-pre-wrap')
                                                 new_person_input_id = ui.input('ID человека').classes('w-full')
                                                 new_person_input_text = ui.textarea('Добавить человека').classes('w-full')
 
@@ -196,7 +200,6 @@ class AdminGameUI:
                                                     )
                                                     new_person_input_id.set_value('')
                                                     new_person_input_text.set_value('')
-                                                    self.load_available_games()
                                                     refresh_people()
                                                     ui.notify('Добавлено в справочник')
                                                     self.log_service.add_log(
@@ -222,11 +225,12 @@ class AdminGameUI:
                                             current_data = self.game_state_service.get_game_state(gid)
                                             gosplaces_container.clear()
                                             with gosplaces_container:
-                                                for place_id, place_text in current_data.get('spravochnik', {}).get(
-                                                        'gosplace', {}).items():
-                                                    with ui.card().classes('w-full mb-2 p-3'):
-                                                        ui.label(f'**{place_id}**: {place_text}').classes(
-                                                            'whitespace-pre-wrap')
+                                                if current_data:
+                                                    for place_id, place_text in current_data.get('spravochnik', {}).get(
+                                                            'gosplace', {}).items():
+                                                        with ui.card().classes('w-full mb-2 p-3'):
+                                                            ui.label(f'**{place_id}**: {place_text}').classes(
+                                                                'whitespace-pre-wrap')
                                                 new_gosplace_input_id = ui.input('ID гос. места').classes('w-full')
                                                 new_gosplace_input_text = ui.textarea('Добавить гос. место').classes(
                                                     'w-full')
@@ -244,7 +248,6 @@ class AdminGameUI:
                                                     )
                                                     new_gosplace_input_id.set_value('')
                                                     new_gosplace_input_text.set_value('')
-                                                    self.load_available_games()
                                                     refresh_gosplaces()
                                                     ui.notify('Добавлено в справочник')
                                                     self.log_service.add_log(
@@ -270,11 +273,12 @@ class AdminGameUI:
                                             current_data = self.game_state_service.get_game_state(gid)
                                             obplaces_container.clear()
                                             with obplaces_container:
-                                                for place_id, place_text in current_data.get('spravochnik', {}).get(
-                                                        'obplace', {}).items():
-                                                    with ui.card().classes('w-full mb-2 p-3'):
-                                                        ui.label(f'**{place_id}**: {place_text}').classes(
-                                                            'whitespace-pre-wrap')
+                                                if current_data:
+                                                    for place_id, place_text in current_data.get('spravochnik', {}).get(
+                                                            'obplace', {}).items():
+                                                        with ui.card().classes('w-full mb-2 p-3'):
+                                                            ui.label(f'**{place_id}**: {place_text}').classes(
+                                                                'whitespace-pre-wrap')
                                                 new_obplace_input_id = ui.input('ID общественного места').classes('w-full')
                                                 new_obplace_input_text = ui.textarea('Добавить общественное место').classes(
                                                     'w-full')
@@ -293,7 +297,6 @@ class AdminGameUI:
                                                     )
                                                     new_obplace_input_id.set_value('')
                                                     new_obplace_input_text.set_value('')
-                                                    self.load_available_games()
                                                     refresh_obplaces()
                                                     ui.notify('Добавлено в справочник')
                                                     self.log_service.add_log(
@@ -316,27 +319,28 @@ class AdminGameUI:
                                     with ui.expansion('Полиция (112102)', icon='local_police', group='element').classes(
                                             'w-full'):
                                         def refresh_police(gid=game_id):
-                                            current_data = self.game_state_service.get_game_state(gid).get('112102', {})
+                                            current_data = self.game_state_service.get_game_state(gid)
+                                            police_data = current_data.get('112102', {}) if current_data else {}
                                             police_container.clear()
                                             with police_container:
                                                 # Показываем текущие данные как markdown
-                                                if current_data.get('text'):
+                                                if police_data.get('text'):
                                                     with ui.card().classes('w-full mb-2 p-3'):
                                                         ui.label('Текст:').classes('font-bold')
-                                                        ui.markdown(current_data.get('text', '')).classes(
+                                                        ui.markdown(police_data.get('text', '')).classes(
                                                             'whitespace-pre-wrap')
 
-                                                if current_data.get('delo'):
+                                                if police_data.get('delo'):
                                                     with ui.card().classes('w-full mb-2 p-3'):
                                                         ui.label('Дело:').classes('font-bold')
-                                                        ui.markdown(current_data.get('delo', '')).classes(
+                                                        ui.markdown(police_data.get('delo', '')).classes(
                                                             'whitespace-pre-wrap')
 
                                                 # Поля для редактирования
                                                 police_text_input = ui.textarea('Редактировать текст').classes('w-full')
-                                                police_text_input.value = current_data.get('text', '')
+                                                police_text_input.value = police_data.get('text', '')
                                                 police_delo_input = ui.textarea('Редактировать дело').classes('w-full mt-2')
-                                                police_delo_input.value = current_data.get('delo', '')
+                                                police_delo_input.value = police_data.get('delo', '')
 
                                                 def save_police():
                                                     # Здесь можно оставить необязательным поле "дело"
@@ -353,7 +357,6 @@ class AdminGameUI:
                                                     )
                                                     police_text_input.set_value('')
                                                     police_delo_input.set_value('')
-                                                    self.load_available_games()
                                                     refresh_police()
                                                     ui.notify('Полиция обновлена')
                                                     self.log_service.add_log(
@@ -375,28 +378,29 @@ class AdminGameUI:
                                     # Морг
                                     with ui.expansion('Морг (440321)', icon='sick', group='element').classes('w-full'):
                                         def refresh_morg(gid=game_id):
-                                            current_data = self.game_state_service.get_game_state(gid).get('440321', {})
+                                            current_data = self.game_state_service.get_game_state(gid)
+                                            morg_data = current_data.get('440321', {}) if current_data else {}
                                             morg_container.clear()
                                             with morg_container:
                                                 # Показываем текущие данные как markdown
-                                                if current_data.get('text'):
+                                                if morg_data.get('text'):
                                                     with ui.card().classes('w-full mb-2 p-3'):
                                                         ui.label('Текст:').classes('font-bold')
-                                                        ui.markdown(current_data.get('text', '')).classes(
+                                                        ui.markdown(morg_data.get('text', '')).classes(
                                                             'whitespace-pre-wrap')
 
-                                                if current_data.get('vskrytie'):
+                                                if morg_data.get('vskrytie'):
                                                     with ui.card().classes('w-full mb-2 p-3'):
                                                         ui.label('Вскрытие:').classes('font-bold')
-                                                        ui.markdown(current_data.get('vskrytie', '')).classes(
+                                                        ui.markdown(morg_data.get('vskrytie', '')).classes(
                                                             'whitespace-pre-wrap')
 
                                                 # Поля для редактирования
                                                 morg_text_input = ui.textarea('Редактировать текст').classes('w-full')
-                                                morg_text_input.value = current_data.get('text', '')
+                                                morg_text_input.value = morg_data.get('text', '')
                                                 morg_vskrytie_input = ui.textarea('Редактировать вскрытие').classes(
                                                     'w-full mt-2')
-                                                morg_vskrytie_input.value = current_data.get('vskrytie', '')
+                                                morg_vskrytie_input.value = morg_data.get('vskrytie', '')
 
                                                 def save_morg():
                                                     # Здесь текст обязателен, вскрытие - опционально
@@ -413,7 +417,6 @@ class AdminGameUI:
                                                     )
                                                     morg_text_input.set_value('')
                                                     morg_vskrytie_input.set_value('')
-                                                    self.load_available_games()
                                                     refresh_morg()
                                                     ui.notify('Морг обновлен')
                                                     self.log_service.add_log(
@@ -436,28 +439,29 @@ class AdminGameUI:
                                     with ui.expansion('ЗАГС (220123)', icon='assignment', group='element').classes(
                                             'w-full'):
                                         def refresh_zags(gid=game_id):
-                                            current_data = self.game_state_service.get_game_state(gid).get('220123', {})
+                                            current_data = self.game_state_service.get_game_state(gid)
+                                            zags_data = current_data.get('220123', {}) if current_data else {}
                                             zags_container.clear()
                                             with zags_container:
                                                 # Показываем текущие данные как markdown
-                                                if current_data.get('text'):
+                                                if zags_data.get('text'):
                                                     with ui.card().classes('w-full mb-2 p-3'):
                                                         ui.label('Текст:').classes('font-bold')
-                                                        ui.markdown(current_data.get('text', '')).classes(
+                                                        ui.markdown(zags_data.get('text', '')).classes(
                                                             'whitespace-pre-wrap')
 
-                                                if current_data.get('otchet'):
+                                                if zags_data.get('otchet'):
                                                     with ui.card().classes('w-full mb-2 p-3'):
                                                         ui.label('Отчет:').classes('font-bold')
-                                                        ui.markdown(current_data.get('otchet', '')).classes(
+                                                        ui.markdown(zags_data.get('otchet', '')).classes(
                                                             'whitespace-pre-wrap')
 
                                                 # Поля для редактирования
                                                 zags_text_input = ui.textarea('Редактировать текст').classes('w-full')
-                                                zags_text_input.value = current_data.get('text', '')
+                                                zags_text_input.value = zags_data.get('text', '')
                                                 zags_otchet_input = ui.textarea('Редактировать отчет').classes(
                                                     'w-full mt-2')
-                                                zags_otchet_input.value = current_data.get('otchet', '')
+                                                zags_otchet_input.value = zags_data.get('otchet', '')
 
                                                 def save_zags():
                                                     # Текст обязательный, отчет - опциональный
@@ -474,7 +478,6 @@ class AdminGameUI:
                                                     )
                                                     zags_text_input.set_value('')
                                                     zags_otchet_input.set_value('')
-                                                    self.load_available_games()
                                                     refresh_zags()
                                                     ui.notify('ЗАГС обновлен')
                                                     self.log_service.add_log(
@@ -496,10 +499,11 @@ class AdminGameUI:
                                     # Другие места
                                     with ui.expansion('Другие места', icon='place', group='element').classes('w-full'):
                                         def refresh_places(gid=game_id):
-                                            current_data = self.game_state_service.get_game_state(gid).get('place', {})
+                                            current_data = self.game_state_service.get_game_state(gid)
+                                            place_data = current_data.get('place', {}) if current_data else {}
                                             places_container.clear()
                                             with places_container:
-                                                for place_id, place_text in current_data.items():
+                                                for place_id, place_text in place_data.items():
                                                     with ui.card().classes('w-full mb-4 p-3'):
                                                         ui.label(f'ID: {place_id}').classes('font-bold')
                                                         ui.markdown(place_text).classes('whitespace-pre-wrap')
@@ -522,7 +526,6 @@ class AdminGameUI:
                                                         )
                                                         place_id_input.set_value('')
                                                         place_text_input.set_value('')
-                                                        self.load_available_games()
                                                         refresh_places()
                                                         ui.notify('Место добавлено')
                                                         self.log_service.add_log(
@@ -543,17 +546,18 @@ class AdminGameUI:
 
                                     with ui.expansion('Виновный', icon='report_problem', group='element').classes('w-full'):
                                         def refresh_culprit(gid=game_id):
-                                            current_data = self.game_state_service.get_game_state(gid).get('isCulprit', {})
+                                            current_data = self.game_state_service.load(gid)
+                                            culprit_data = current_data.get('isCulprit', {}) if current_data else {}
                                             culprit_container.clear()
                                             with culprit_container:
-                                                if current_data.get('id') and current_data.get('name') and current_data.get(
+                                                if culprit_data.get('id') and culprit_data.get('name') and culprit_data.get(
                                                         'endText'):
                                                     with ui.card().classes('w-full mb-4 p-3'):
-                                                        ui.label(f'ID: {current_data["id"]}').classes('font-bold')
-                                                        ui.label(current_data['name']).classes('whitespace-pre-wrap')
+                                                        ui.label(f'ID: {culprit_data["id"]}').classes('font-bold')
+                                                        ui.label(culprit_data['name']).classes('whitespace-pre-wrap')
                                                     with ui.card().classes('w-full mb-4 p-3'):
-                                                        ui.markdown(current_data.get('endText', '')).classes(
-                                                            'whitespace-pre-wrap')
+                                                        ui.markdown(culprit_data.get('endText', '')).classes(
+                                                                'whitespace-pre-wrap')
                                                 with ui.card().classes('w-full p-4 bg-blue-50 dark:bg-blue-900'):
                                                     culprit_id_input = ui.input('ID виновного').classes('w-full')
                                                     culprit_text_input = ui.textarea('Название виновного').classes(
@@ -563,7 +567,8 @@ class AdminGameUI:
 
                                                     def add_culprit():
                                                         if not self.validate_fields(
-                                                                culprit_id_input, culprit_text_input, culprit_endtext_input,
+                                                                culprit_id_input, culprit_text_input,
+                                                                culprit_endtext_input,
                                                                 field_names=["ID виновного", "Название виновного",
                                                                              "Финальный текст"]
                                                         ):
@@ -579,44 +584,47 @@ class AdminGameUI:
                                                         culprit_id_input.set_value('')
                                                         culprit_text_input.set_value('')
                                                         culprit_endtext_input.set_value('')
-                                                        self.load_available_games()
                                                         refresh_culprit()
                                                         ui.notify('Виновный обновлен')
                                                         self.log_service.add_log(
-                                                            level='ADMIN_GAME',
+                                                              level='ADMIN_GAME',
                                                             user_id=app.storage.user.get('user_id', None),
                                                             action="ADMIN_GAME_SET_CULPRIT",
-                                                            message=f"Администратор установил виновного '{culprit_id}' в игре {gid}",
+                                                               message=f"Администратор установил виновного '{culprit_id}' в игре {gid}",
                                                             metadata={
-                                                                "game_id": gid,
+                                                            "game_id": gid,
                                                                 "culprit_id": culprit_id,
                                                                 "culprit_name": culprit_text_input.value
                                                             }
                                                         )
-
                                                     ui.button(
-                                                        'Добавить',
+                                                    'Добавить',
                                                         on_click=add_culprit
                                                     ).classes('mt-2')
 
                                         culprit_container = ui.column().classes('w-full')
                                         refresh_culprit()
 
-                                    # Подсказка
-                                    with ui.expansion('Подсказка', icon='psychology', group='element').classes(
-                                            'w-full'):
+                                                    # Подсказка
+                                    with ui.expansion('Подсказка', icon='psychology', group='element').classes('w-full'):
                                         def refresh_tooltip(gid=game_id):
-                                            current_data = self.game_state_service.get_game_state(gid).get('tooltip',
-                                                                                                           {})
+                                            current_data = self.game_state_service.load(gid)
+                                            tooltip_data = current_data.get('tooltip',{}) if current_data else {}
                                             tooltip_container.clear()
                                             with tooltip_container:
-                                                if current_data.get('count') and current_data.get('location_id'):
-                                                    with ui.card().classes('w-full mb-4 p-3'):
-                                                        ui.label(f'Кол.ходов: {current_data['count']}').classes('font-bold')
-                                                        ui.label(f'ID локации: {current_data['location_id']}').classes('font-bold')
-                                                with ui.card().classes('w-full p-4 bg-blue-50 dark:bg-blue-900'):
-                                                    count_step_input = ui.input('Число ходов').classes('w-full')
-                                                    location_id_input = ui.textarea('ID места').classes('w-full mt-2')
+                                                if tooltip_data:
+                                                    for key, place in tooltip_data.items():
+                                                        with ui.card().classes('w-full mb-4 p-3'):
+                                                            ui.label(f'Кол.ходов: {key}').classes(
+                                                                'font-bold')
+                                                            ui.label(f'ID локации: {place}').classes(
+                                                                'font-bold')
+                                                with ui.card().classes(
+                                                        'w-full p-4 bg-blue-50 dark:bg-blue-900'):
+                                                    count_step_input = ui.input('Число ходов').classes(
+                                                        'w-full')
+                                                    location_id_input = ui.textarea('ID места').classes(
+                                                        'w-full mt-2')
 
                                                     def add_tooltip():
                                                         if not self.validate_fields(
@@ -634,15 +642,16 @@ class AdminGameUI:
                                                         )
                                                         count_step_input.set_value('')
                                                         location_id_input.set_value('')
-                                                        self.load_available_games()
                                                         refresh_tooltip()
-                                                        ui.notify('Подсказка добавлено')
+                                                        ui.notify('Подсказка добавлена')
                                                         self.log_service.add_log(
                                                             level='ADMIN_GAME',
                                                             user_id=app.storage.user.get('user_id', None),
                                                             action="ADMIN_GAME_ADD_TOOLTIP",
                                                             message=f"Администратор добавил подсказку на '{count}' ходе в игру {gid}",
-                                                            metadata={"game_id": gid, "location_id":location_id,"count": count}
+                                                            metadata={"game_id": gid,
+                                                                      "location_id": location_id,
+                                                                      "count": count}
                                                         )
 
                                                     ui.button(
@@ -654,13 +663,12 @@ class AdminGameUI:
                                         refresh_tooltip()
 
         else:
-            ui.label('Выберите игру из списка выше или создайте новую').classes(
-                'text-center w-full p-8 text-gray-500 italic')
+            ui.label('Выберите игру из списка выше или создайте новую').classes('text-center w-full p-8 text-gray-500 italic')
 
     def show_create_game_dialog(self):
-        with ui.dialog() as dialog, ui.card().classes('w-full p-4 bg-blue-50 dark:bg-blue-900'):
-            ui.label('Создать новую игру').classes('font-bold mb-2')
-            game_id_input = ui.input('Айди игры')
+        with ui.dialog() as dialog, ui.card().classes('p-6 w-96'):
+            ui.label('Создать новую игру').classes('text-xl font-bold mb-4')
+            game_id_input = ui.input('Айди игры').classes('w-full')
 
             def create_game():
                 game_id = game_id_input.value.strip()
@@ -668,8 +676,9 @@ class AdminGameUI:
                 if not self.validate_fields(game_id_input, field_names=["ID игры"]):
                     return
 
-                if game_id in self.available_games:
-                    ui.notify(f'Игра с ID "{game_id}" уже существует', color='negative')
+                if game_id in self.game_ids:
+                    ui.notify(f'Игра с ID "{game_id}" уже существует',
+                              color='negative')
                     return
 
                 try:
@@ -686,7 +695,8 @@ class AdminGameUI:
                     )
                     dialog.close()
                 except Exception as e:
-                    ui.notify(f'Ошибка при создании игры: {str(e)}', color='negative')
+                    ui.notify(f'Ошибка при создании игры: {str(e)}',
+                              color='negative')
                     self.log_service.add_log(
                         level='ADMIN_GAME',
                         action='ERROR',
@@ -695,9 +705,11 @@ class AdminGameUI:
                         metadata={'game_id': game_id}
                     )
 
-            with ui.row().classes('justify-end mt-4'):
-                ui.button('Отмена', on_click=dialog.close).classes('bg-gray-300 text-white')
-                ui.button('Создать', on_click=create_game).classes('bg-green-500 text-white')
+            with ui.row().classes('justify-center mt-4 w-full'):
+                ui.button('Отмена', on_click=dialog.close,color='gray').classes(
+                    'text-white')
+                ui.button('Создать', on_click=create_game, color='green').classes(
+                    'text-white')
 
         dialog.open()
 
@@ -707,20 +719,39 @@ class AdminGameUI:
             self.display_container.clear()
             self.create_game_cards()
 
+
+    def migrate_old_games(self):
+        """Мигрирует игры из старого формата хранения в новый"""
+        migrated = self.game_state_service.migrate_from_single_file()
+
+        if migrated is None:
+            ui.notify('Миграция не выполнена из-за ошибки', color='negative')
+        elif migrated == 0:
+            ui.notify('Нет игр для миграции или все игры уже мигрированы', color='warning')
+        else:
+            ui.notify(f'Успешно мигрировано {migrated} игр', color='positive')
+            self.load_available_games()
+            self.refresh_ui()
+
     def create_ui(self):
         """Создает интерфейс управления игровыми комнатами"""
         self.load_available_games()
 
         with ui.card().classes('w-full p-4'):
-            ui.label('Управление игровыми комнатами').classes('text-xl font-bold mb-4')
+            ui.label('Управление играми').classes(
+                'text-xl font-bold mb-4')
 
             # Кнопки верхнего уровня
             with ui.row().classes('w-full justify-between mb-4'):
-                ui.button('Обновить список игр', icon='refresh', on_click=lambda: self.refresh_ui()) \
-                    .classes('bg-blue-500 text-white')
+                ui.button('Обновить список игр', icon='refresh', on_click=lambda: self.refresh_ui(), color='blue') \
+                    .classes('text-white')
 
-                ui.button('Создать новую игру', icon='add', on_click=lambda: self.show_create_game_dialog()) \
-                    .classes('bg-green-500 text-white')
+                ui.button('Мигрировать старые игры', icon='upgrade', on_click=lambda: self.migrate_old_games(), color='yellow') \
+                    .classes('text-white')
+
+                ui.button('Создать новую игру', icon='add', on_click=lambda: self.show_create_game_dialog(), color='green') \
+                    .classes('text-white')
+
             # Контейнер для карточек игр
             self.display_container = ui.column().classes('w-full')
             self.create_game_cards()

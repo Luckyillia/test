@@ -11,8 +11,6 @@ class GameRoomManagementUI:
     def __init__(self):
         """
         Инициализирует UI для управления игровыми комнатами
-
-        :param game_room_management: Экземпляр класса GameRoomManagement
         """
         self.room_manager = GameRoomManagement()
         self.user_service = UserService()
@@ -21,13 +19,14 @@ class GameRoomManagementUI:
 
         # Данные о комнатах и играх
         self.room_data = {}
-        self.game_data = {}
+        self.game_ids = []  # Список ID игр вместо словаря всех игр
         self.display_container = None
 
     def load_data(self):
-        """Загружает данные о комнатах и играх"""
+        """Загружает данные о комнатах и список доступных игр"""
         self.room_data = self.room_manager.load()
-        self.game_data = self.game_state_service.load()
+        # Получаем список всех ID игр вместо загрузки всех данных
+        self.game_ids = self.game_state_service.list_all_games()
 
     def get_username_by_id(self, user_id):
         """Получает имя пользователя по его ID"""
@@ -37,15 +36,18 @@ class GameRoomManagementUI:
                 return user.get('username', 'Неизвестный пользователь')
         return 'Неизвестный пользователь'
 
-    def get_location_name_by_id(self, location_id):
-        """Получает название локации по ее ID"""
-        game_data = self.game_state_service.load()
+    def get_location_name_by_id(self, location_id, game_id):
+        """Получает название локации по ее ID и ID игры"""
+        # Загружаем данные только для нужной игры
+        game_data = self.game_state_service.get_game_state(game_id)
 
-        for game_id, game_info in game_data.items():
-            locations = game_info.get('locations', [])
-            for location in locations:
-                if location.get('id') == location_id:
-                    return location.get('name', 'Название недоступно')
+        if not game_data:
+            return f"Локация {location_id}"
+
+        locations = game_data.get('locations', [])
+        for location in locations:
+            if location.get('id') == location_id:
+                return location.get('name', 'Название недоступно')
 
         return f"Локация {location_id}"
 
@@ -59,7 +61,7 @@ class GameRoomManagementUI:
             room_id_input = ui.input(label='ID комнаты').classes('w-full mb-4')
             game_id_select = ui.select(
                 label='ID игры',
-                options=list(self.game_data.keys()) if self.game_data else []
+                options=self.game_ids if self.game_ids else []
             ).classes('w-full mb-4')
 
             def confirm_create():
@@ -115,6 +117,8 @@ class GameRoomManagementUI:
             ui.label(f'История перемещений в комнате {room_id}').classes('text-xl font-bold mb-4')
 
             location_history = self.room_data[room_id].get('location_history', [])
+            game_id = self.room_data[room_id].get('game_id')
+
             self.column = [
                 {'name': 'id', 'label': 'ID', 'field': 'id', 'align': 'center'},
                 {'name': 'name', 'label': 'Название локации', 'field': 'name', 'align': 'center'},
@@ -126,14 +130,15 @@ class GameRoomManagementUI:
 
                     for i, loc in enumerate(location_history):
                         loc_id = loc.get('id', 'Неизвестно')
-                        loc_name = self.get_location_name_by_id(loc_id)
+                        # Передаем game_id для получения названия локации из правильной игры
+                        loc_name = self.get_location_name_by_id(loc_id, game_id) if game_id else f"Локация {loc_id}"
                         visited_time = datetime.fromtimestamp(loc.get('visited_at', 0)).strftime('%d.%m.%Y %H:%M:%S')
 
                         table.rows.append({
-                            "id":loc_id,
-                            "name":loc_name,
-                            "time":visited_time,
-                            "step":str(i + 1)
+                            "id": loc_id,
+                            "name": loc_name,
+                            "time": visited_time,
+                            "step": str(i + 1)
                         })
             else:
                 ui.label('История перемещений пуста').classes('text-gray-500 my-1')
@@ -156,10 +161,10 @@ class GameRoomManagementUI:
                 {'name': 'username', 'label': 'Пользователь', 'field': 'username', 'align': 'center'},
             ]
             if user_list:
-                with ui.table(columns=self.column,rows=[]).classes('w-full') as table:
+                with ui.table(columns=self.column, rows=[]).classes('w-full') as table:
                     for user_id in user_list:
                         username = self.get_username_by_id(user_id)
-                        table.rows.append({"user_id":user_id, "username":username})
+                        table.rows.append({"user_id": user_id, "username": username})
             else:
                 ui.label('В комнате нет пользователей').classes('text-gray-500 my-1')
 
@@ -241,7 +246,7 @@ class GameRoomManagementUI:
             action='ADMIN_ROOM_CHANGE_STATUS',
             user_id=app.storage.user.get('user_id'),
             message=f"Игра в комнате завершена",
-            metadata={"room_id": room_id,"new_status":self.room_data[room_id]['status']}
+            metadata={"room_id": room_id, "new_status": self.room_data[room_id]['status']}
         )
 
         ui.notify(f'Игра в комнате {room_id} помечена как завершенная', type='positive')
@@ -277,11 +282,11 @@ class GameRoomManagementUI:
             with ui.card():
                 ui.label('Выберите новый ID игры').classes('text-lg')
 
-                # Селект с опциями
+                # Селект с опциями - используем список ID игр
+                current_game_id = self.room_data[room_id].get('game_id')
                 selected_game_id = ui.select(
-                    options=list(self.game_data.keys()) if self.game_data else [],
-                    value=self.room_data[room_id].get('game_id') if self.room_data[room_id].get(
-                        'game_id') in self.game_data else None
+                    options=self.game_ids if self.game_ids else [],
+                    value=current_game_id if current_game_id in self.game_ids else None
                 ).classes('w-full')
 
                 # Кнопки
@@ -292,8 +297,6 @@ class GameRoomManagementUI:
                     ui.button('Отмена', on_click=dialog.close).props('color=secondary')
 
         dialog.open()
-
-
 
     def refresh_ui(self):
         """Обновляет данные и пересоздает UI"""
@@ -315,6 +318,10 @@ class GameRoomManagementUI:
             for room_id, room in self.room_data.items():
                 status_class = 'text-green-500' if room.get('status') == 'playing' else 'text-red-500'
                 status_text = 'Активна' if room.get('status') == 'playing' else 'Завершена'
+                game_id = room.get("game_id", "Не указан")
+
+                # Проверяем существование игры в новом формате
+                game_exists = game_id in self.game_ids
 
                 with ui.card().classes('w-full p-4 mb-4'):
                     with ui.expansion(f'Комната: {room_id}', icon='meeting_room', group='rooms').classes('w-full'):
@@ -324,7 +331,15 @@ class GameRoomManagementUI:
                                 ui.label(f'Статус: ').classes('font-bold')
                                 ui.label(status_text).classes(f'{status_class} mr-4')
 
-                                ui.label(f'ID игры: {room.get("game_id", "Не указан")}').classes('mr-4')
+                                # Добавляем индикатор существования игры
+                                game_id_text = f'ID игры: {game_id}'
+                                if not game_exists and game_id != "Не указан":
+                                    game_id_text += ' (Файл игры не найден)'
+                                    game_id_class = 'mr-4 text-red-500'
+                                else:
+                                    game_id_class = 'mr-4'
+
+                                ui.label(game_id_text).classes(game_id_class)
 
                                 last_visited = room.get('last_visited_at', 0)
                                 last_visited_str = datetime.fromtimestamp(last_visited).strftime(
@@ -346,14 +361,16 @@ class GameRoomManagementUI:
                                 # Кнопки информации
                                 with ui.row():
                                     ui.button('История перемещений', icon='history',
-                                              on_click=lambda rid=room_id: self.show_location_history(rid)).classes('mr-2 bg-blue-600 text-white')
+                                              on_click=lambda rid=room_id: self.show_location_history(rid)).classes(
+                                        'mr-2 bg-blue-600 text-white')
 
                                     ui.button('Пользователи', icon='people',
-                                              on_click=lambda rid=room_id: self.show_users_in_room(rid)).classes('mr-2 bg-blue-600 text-white')
+                                              on_click=lambda rid=room_id: self.show_users_in_room(rid)).classes(
+                                        'mr-2 bg-blue-600 text-white')
 
                                     ui.button('Изменить ID игры',
-                                              on_click=lambda rid=room_id: self.open_change_game_id_dialog(rid)).classes('mr-2 bg-blue-600 text-white')
-
+                                              on_click=lambda rid=room_id: self.open_change_game_id_dialog(
+                                                  rid)).classes('mr-2 bg-blue-600 text-white')
 
                                 # Кнопки управления
                                 with ui.row():
