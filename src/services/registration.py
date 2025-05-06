@@ -1,6 +1,7 @@
 from nicegui import ui
 from src.services.user_service import UserService
 from src.services.log_services import LogService
+from src.services.password_service import PasswordService
 import random
 import string
 
@@ -10,6 +11,7 @@ class Registration:
         # Initialize services
         self.user_service = UserService()
         self.log_service = LogService()  # Инициализация логирования
+        self.password_service = PasswordService()
         self.user_table = user_table
         self.avatar_url = self.generate_avatar()
 
@@ -18,6 +20,7 @@ class Registration:
         self.surname_input = ui.input('Фамилия').classes('m-auto w-64')
         self.username_input = ui.input('Логин').classes('m-auto w-64')
         self.password_input = ui.input('Пароль', password=True, password_toggle_button=True).classes('m-auto w-64')
+        self.email_input = ui.input('Email').classes('m-auto w-64')
 
         # Initialize avatar image UI
         self.avatar_image = ui.image(self.avatar_url).classes('w-32 h-32 m-auto')
@@ -48,14 +51,28 @@ class Registration:
     def add_user(self, redirect_to: str = '/'):
         # Validate input fields
         if self.name_input.value and self.surname_input.value and self.username_input.value and self.password_input.value:
+            # Проверка длины пароля
             if len(self.password_input.value) >= 8:
+                # Проверка сложности пароля
+                password_check = self.password_service.check_password_strength(self.password_input.value)
+                if not password_check["valid"]:
+                    ui.notify('\n'.join(password_check["errors"]), color='red')
+                    self.log_service.add_log(
+                        message=f"Ошибка регистрации: пароль не соответствует требованиям для пользователя {self.username_input.value}",
+                        level="ERROR",
+                        action="USER_REGISTRATION",
+                        metadata={"username": self.username_input.value, "password_errors": password_check["errors"]}
+                    )
+                    return
+
                 # Try to add the user
                 if not self.user_service.add_user(
-                    self.name_input.value.strip(),
-                    self.surname_input.value.strip(),
-                    self.username_input.value.strip(),
-                    self.password_input.value.strip(),
-                    self.avatar_url.strip()
+                        self.name_input.value.strip(),
+                        self.surname_input.value.strip(),
+                        self.username_input.value.strip(),
+                        self.password_input.value.strip(),
+                        self.avatar_url.strip(),
+                        self.email_input.value.strip()  # Добавлен email
                 ):
                     ui.notify('Такой пользователь уже есть', color='red')
                     self.log_service.add_log(
@@ -71,6 +88,7 @@ class Registration:
                 self.surname_input.value = ''
                 self.username_input.value = ''
                 self.password_input.value = ''
+                self.email_input.value = ''
                 self.avatar_url = self.generate_avatar()
                 self.avatar_image.set_source(self.avatar_url)
 

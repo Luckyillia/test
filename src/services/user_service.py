@@ -2,12 +2,15 @@ import json
 import os
 import uuid
 from src.models.user import User
-from src.services.log_services import LogService  # Добавил импорт логирования
+from src.services.log_services import LogService
+from src.services.password_service import PasswordService
+
 
 class UserService:
     def __init__(self, file_name='data/data.json'):
         self.file_name = file_name
-        self.log_service = LogService()  # Инициализация логирования
+        self.log_service = LogService()
+        self.password_service = PasswordService()
 
     def load_data(self):
         directory = os.path.dirname(self.file_name)
@@ -54,7 +57,8 @@ class UserService:
             )
             return False
 
-    def add_user(self, name, surname, username, password, avatar):
+    def add_user(self, name, surname, username, password, avatar, email=None):
+        # Проверяем доступность имени пользователя
         users = self.load_data()
         if not self.is_username_available(username):
             self.log_service.add_error_log(
@@ -63,8 +67,20 @@ class UserService:
             )
             return False
 
+        # Проверяем сложность пароля
+        password_check = self.password_service.check_password_strength(password)
+        if not password_check["valid"]:
+            self.log_service.add_error_log(
+                error_message="Пароль не соответствует требованиям безопасности",
+                metadata={"password_errors": password_check["errors"]}
+            )
+            return False
+
+        # Хешируем пароль перед сохранением
+        hashed_password = self.password_service.hash_password(password)
+
         user_id = str(uuid.uuid4())
-        new_user = User(user_id, name, surname, username, password, avatar).to_dict()
+        new_user = User(user_id, name, surname, username, hashed_password, avatar, email).to_dict()
         users.append(new_user)
         success = self.write_data(users)
 
@@ -110,6 +126,21 @@ class UserService:
                         )
                         return False
 
+                # Если меняется пароль, хешируем его
+                if 'password' in new_data and new_data['password'] != user['password']:
+                    # Проверяем, не является ли пароль уже хешированным
+                    if '$' not in new_data['password']:
+                        # Проверяем сложность пароля
+                        password_check = self.password_service.check_password_strength(new_data['password'])
+                        if not password_check["valid"]:
+                            self.log_service.add_error_log(
+                                error_message="Новый пароль не соответствует требованиям безопасности",
+                                metadata={"password_errors": password_check["errors"]}
+                            )
+                            return False
+                        # Хешируем пароль
+                        new_data['password'] = self.password_service.hash_password(new_data['password'])
+
                 users[i] = {**user, **new_data}
                 success = self.write_data(users)
 
@@ -132,3 +163,37 @@ class UserService:
             if user['username'] == username:
                 return user
         return None
+
+    def get_user_by_id(self, user_id):
+        users = self.load_data()
+        for user in users:
+            if user['id'] == user_id:
+                return user
+        return None
+
+    def migrate_passwords(self):
+        """Мигрирует все пароли из открытого текста в хешированный формат"""
+        users = self.load_data()
+        updated = 0
+
+        for user in users:
+            if '$' not in user['password']:
+                # Пароль в открытом виде, хешируем его
+                user['password'] = self.password_service.hash_password(user['password'])
+                updated += 1
+
+        if updated > 0:
+            if self.write_data(users):
+                self.log_service.add_system_log(
+                    message=f"Миграция паролей: успешно захешировано {updated} паролей",
+                    metadata={"migrated_count": updated}
+                )
+                return updated
+            else:
+                self.log_service.add_error_log(
+                    error_message="Ошибка при миграции паролей",
+                    metadata={"attempted_count": updated}
+                )
+                return 0
+
+        return 0  # Нет паролей для миграции
